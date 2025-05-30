@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import type React from "react"
+
+import { useEffect, useRef, useState } from "react"
 
 interface MonacoEditorProps {
   value: string
@@ -21,220 +23,284 @@ export default function MonacoEditor({
   onBreakpointToggle,
   disabled = false,
 }: MonacoEditorProps) {
-  const editorRef = useRef<any>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const monacoRef = useRef<any>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const lineNumbersRef = useRef<HTMLDivElement>(null)
+  const [lines, setLines] = useState<string[]>([])
 
   useEffect(() => {
-    const loadMonaco = async () => {
-      if (typeof window !== "undefined") {
-        const monaco = await import("monaco-editor")
-        monacoRef.current = monaco
-
-        // VS Code-like theme
-        monaco.editor.defineTheme("vscode-dark", {
-          base: "vs-dark",
-          inherit: true,
-          rules: [
-            { token: "comment", foreground: "6A9955", fontStyle: "italic" },
-            { token: "keyword", foreground: "569CD6", fontStyle: "bold" },
-            { token: "string", foreground: "CE9178" },
-            { token: "number", foreground: "B5CEA8" },
-            { token: "regexp", foreground: "D16969" },
-            { token: "operator", foreground: "D4D4D4" },
-            { token: "namespace", foreground: "4EC9B0" },
-            { token: "type", foreground: "4EC9B0" },
-            { token: "struct", foreground: "4EC9B0" },
-            { token: "class", foreground: "4EC9B0" },
-            { token: "interface", foreground: "4EC9B0" },
-            { token: "parameter", foreground: "9CDCFE" },
-            { token: "variable", foreground: "9CDCFE" },
-            { token: "property", foreground: "9CDCFE" },
-            { token: "enumMember", foreground: "4FC1FF" },
-            { token: "function", foreground: "DCDCAA" },
-            { token: "member", foreground: "DCDCAA" },
-          ],
-          colors: {
-            "editor.background": "#1e1e1e",
-            "editor.foreground": "#d4d4d4",
-            "editorLineNumber.foreground": "#858585",
-            "editorLineNumber.activeForeground": "#c6c6c6",
-            "editor.lineHighlightBackground": "#2d2d30",
-            "editor.selectionBackground": "#264f78",
-            "editor.inactiveSelectionBackground": "#3a3d41",
-            "editorCursor.foreground": "#aeafad",
-            "editor.wordHighlightBackground": "#575757b8",
-            "editor.wordHighlightStrongBackground": "#004972b8",
-            "editorBracketMatch.background": "#0064001a",
-            "editorBracketMatch.border": "#888888",
-            "editorGutter.background": "#1e1e1e",
-            "editorGutter.modifiedBackground": "#1b81a8",
-            "editorGutter.addedBackground": "#487e02",
-            "editorGutter.deletedBackground": "#f85149",
-          },
-        })
-
-        if (containerRef.current) {
-          editorRef.current = monaco.editor.create(containerRef.current, {
-            value: value,
-            language: language,
-            theme: "vscode-dark",
-            automaticLayout: true,
-            fontSize: 14,
-            fontFamily:
-              "'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Menlo, 'Ubuntu Mono', monospace",
-            lineNumbers: "on",
-            roundedSelection: false,
-            scrollBeyondLastLine: false,
-            readOnly: disabled,
-            minimap: { enabled: false },
-            folding: true,
-            lineDecorationsWidth: 10,
-            lineNumbersMinChars: 3,
-            glyphMargin: true,
-            contextmenu: true,
-            mouseWheelZoom: true,
-            formatOnPaste: true,
-            formatOnType: true,
-            autoIndent: "full",
-            tabSize: 2,
-            wordWrap: "on",
-            bracketPairColorization: { enabled: true },
-            guides: {
-              bracketPairs: true,
-              indentation: true,
-            },
-            suggest: {
-              showKeywords: true,
-              showSnippets: true,
-              showFunctions: true,
-              showVariables: true,
-            },
-            quickSuggestions: {
-              other: true,
-              comments: false,
-              strings: false,
-            },
-            parameterHints: { enabled: true },
-            hover: { enabled: true },
-            smoothScrolling: true,
-            cursorBlinking: "blink",
-            cursorSmoothCaretAnimation: "on",
-            renderLineHighlight: "line",
-            renderWhitespace: "selection",
-            showFoldingControls: "mouseover",
-          })
-
-          editorRef.current.onDidChangeModelContent(() => {
-            const newValue = editorRef.current.getValue()
-            onChange(newValue)
-          })
-
-          editorRef.current.onMouseDown((e: any) => {
-            if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
-              const lineNumber = e.target.position.lineNumber
-              if (onBreakpointToggle) {
-                onBreakpointToggle(lineNumber)
-              }
-            }
-          })
-        }
-      }
-    }
-
-    loadMonaco()
-
-    return () => {
-      if (editorRef.current) {
-        editorRef.current.dispose()
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    if (editorRef.current && editorRef.current.getValue() !== value) {
-      editorRef.current.setValue(value)
-    }
+    const newLines = value.split("\n")
+    setLines(newLines)
   }, [value])
 
-  useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      const model = editorRef.current.getModel()
-      if (model) {
-        monacoRef.current.editor.setModelLanguage(model, language)
-      }
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value
+    onChange(newValue)
+  }
+
+  const handleLineNumberClick = (lineNumber: number) => {
+    if (onBreakpointToggle) {
+      onBreakpointToggle(lineNumber)
     }
-  }, [language])
+  }
 
-  useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      const decorations =
-        currentLine > 0
-          ? [
-              {
-                range: new monacoRef.current.Range(currentLine, 1, currentLine, 1),
-                options: {
-                  isWholeLine: true,
-                  className: "current-line-highlight",
-                  glyphMarginClassName: "current-line-glyph",
-                  linesDecorationsClassName: "current-line-decoration",
-                },
-              },
-            ]
-          : []
-
-      editorRef.current.deltaDecorations([], decorations)
-
-      if (currentLine > 0) {
-        editorRef.current.revealLineInCenter(currentLine)
-      }
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = e.currentTarget.scrollTop
     }
-  }, [currentLine])
+  }
 
-  useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      const decorations = breakpoints.map((lineNumber) => ({
-        range: new monacoRef.current.Range(lineNumber, 1, lineNumber, 1),
-        options: {
-          isWholeLine: false,
-          glyphMarginClassName: "breakpoint-glyph",
-        },
-      }))
-
-      editorRef.current.deltaDecorations([], decorations)
+  const getLanguageClass = (lang: string) => {
+    switch (lang) {
+      case "javascript":
+      case "typescript":
+        return "language-javascript"
+      case "python":
+        return "language-python"
+      case "java":
+        return "language-java"
+      case "cpp":
+        return "language-cpp"
+      default:
+        return "language-javascript"
     }
-  }, [breakpoints])
-
-  useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.updateOptions({ readOnly: disabled })
-    }
-  }, [disabled])
+  }
 
   return (
-    <>
-      <div ref={containerRef} className="w-full h-96 border rounded-md overflow-hidden" />
+    <div className="relative w-full h-96 border rounded-md overflow-hidden bg-[#1e1e1e] flex">
+      {/* Line Numbers */}
+      <div
+        ref={lineNumbersRef}
+        className="flex-shrink-0 w-12 bg-[#1e1e1e] border-r border-gray-600 overflow-hidden"
+        style={{ fontSize: "14px", lineHeight: "20px" }}
+      >
+        {lines.map((_, index) => {
+          const lineNumber = index + 1
+          const isCurrentLine = lineNumber === currentLine
+          const hasBreakpoint = breakpoints.includes(lineNumber)
+
+          return (
+            <div
+              key={lineNumber}
+              className={`
+                relative h-5 flex items-center justify-end pr-2 cursor-pointer select-none
+                ${isCurrentLine ? "bg-yellow-500/20" : "hover:bg-gray-700/50"}
+                ${hasBreakpoint ? "bg-red-500/20" : ""}
+              `}
+              onClick={() => handleLineNumberClick(lineNumber)}
+              style={{ minHeight: "20px" }}
+            >
+              {hasBreakpoint && <div className="absolute left-1 w-3 h-3 bg-red-500 rounded-full"></div>}
+              {isCurrentLine && <div className="absolute left-1 w-1 h-full bg-yellow-400"></div>}
+              <span className="text-[#858585] text-sm font-mono">{lineNumber}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Code Editor */}
+      <div className="flex-1 relative">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleTextChange}
+          onScroll={handleScroll}
+          disabled={disabled}
+          className={`
+            w-full h-full p-2 bg-[#1e1e1e] text-[#d4d4d4] font-mono text-sm
+            border-none outline-none resize-none leading-5
+            ${getLanguageClass(language)}
+          `}
+          style={{
+            fontSize: "14px",
+            lineHeight: "20px",
+            fontFamily:
+              "'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Menlo, 'Ubuntu Mono', monospace",
+            tabSize: 2,
+          }}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          placeholder="Write your code here..."
+        />
+
+        {/* Syntax Highlighting Overlay */}
+        <div
+          className="absolute top-0 left-0 w-full h-full pointer-events-none p-2 font-mono text-sm leading-5 whitespace-pre-wrap overflow-hidden"
+          style={{
+            fontSize: "14px",
+            lineHeight: "20px",
+            fontFamily:
+              "'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Monaco, Menlo, 'Ubuntu Mono', monospace",
+            color: "transparent",
+            background: "transparent",
+          }}
+        >
+          <SyntaxHighlighter code={value} language={language} />
+        </div>
+      </div>
+
       <style jsx global>{`
-        .current-line-highlight {
-          background-color: rgba(255, 255, 0, 0.1) !important;
-        }
-        .current-line-glyph {
-          background-color: #ffff00 !important;
-          width: 4px !important;
-        }
-        .current-line-decoration {
-          background-color: rgba(255, 255, 0, 0.3) !important;
-          width: 4px !important;
-        }
-        .breakpoint-glyph {
-          background-color: #ff0000 !important;
-          border-radius: 50% !important;
-          width: 12px !important;
-          height: 12px !important;
-          margin-left: 2px !important;
-          margin-top: 2px !important;
-        }
+        .language-javascript .keyword { color: #569CD6; font-weight: bold; }
+        .language-javascript .string { color: #CE9178; }
+        .language-javascript .number { color: #B5CEA8; }
+        .language-javascript .comment { color: #6A9955; font-style: italic; }
+        .language-javascript .function { color: #DCDCAA; }
+        .language-javascript .operator { color: #D4D4D4; }
+        
+        .language-python .keyword { color: #569CD6; font-weight: bold; }
+        .language-python .string { color: #CE9178; }
+        .language-python .number { color: #B5CEA8; }
+        .language-python .comment { color: #6A9955; font-style: italic; }
+        .language-python .function { color: #DCDCAA; }
+        
+        .language-java .keyword { color: #569CD6; font-weight: bold; }
+        .language-java .string { color: #CE9178; }
+        .language-java .number { color: #B5CEA8; }
+        .language-java .comment { color: #6A9955; font-style: italic; }
+        .language-java .function { color: #DCDCAA; }
+        
+        .language-cpp .keyword { color: #569CD6; font-weight: bold; }
+        .language-cpp .string { color: #CE9178; }
+        .language-cpp .number { color: #B5CEA8; }
+        .language-cpp .comment { color: #6A9955; font-style: italic; }
+        .language-cpp .function { color: #DCDCAA; }
       `}</style>
-    </>
+    </div>
+  )
+}
+
+// Simple syntax highlighter component
+function SyntaxHighlighter({ code, language }: { code: string; language: string }) {
+  const highlightCode = (text: string, lang: string) => {
+    if (!text) return ""
+
+    let highlighted = text
+
+    // JavaScript/TypeScript keywords
+    if (lang === "javascript" || lang === "typescript") {
+      const keywords = [
+        "function",
+        "const",
+        "let",
+        "var",
+        "if",
+        "else",
+        "for",
+        "while",
+        "return",
+        "class",
+        "import",
+        "export",
+        "default",
+        "async",
+        "await",
+        "try",
+        "catch",
+        "finally",
+        "throw",
+        "new",
+        "this",
+        "super",
+        "extends",
+        "implements",
+        "interface",
+        "type",
+        "enum",
+        "namespace",
+        "module",
+        "declare",
+        "public",
+        "private",
+        "protected",
+        "static",
+        "readonly",
+        "abstract",
+      ]
+
+      keywords.forEach((keyword) => {
+        const regex = new RegExp(`\\b${keyword}\\b`, "g")
+        highlighted = highlighted.replace(regex, `<span class="keyword">${keyword}</span>`)
+      })
+
+      // Strings
+      highlighted = highlighted.replace(/(["'`])((?:\\.|(?!\1)[^\\])*?)\1/g, '<span class="string">$1$2$1</span>')
+
+      // Numbers
+      highlighted = highlighted.replace(/\b\d+\.?\d*\b/g, '<span class="number">$&</span>')
+
+      // Comments
+      highlighted = highlighted.replace(/\/\/.*$/gm, '<span class="comment">$&</span>')
+      highlighted = highlighted.replace(/\/\*[\s\S]*?\*\//g, '<span class="comment">$&</span>')
+
+      // Functions
+      highlighted = highlighted.replace(/\b(\w+)\s*\(/g, '<span class="function">$1</span>(')
+    }
+
+    // Python keywords
+    if (lang === "python") {
+      const keywords = [
+        "def",
+        "class",
+        "if",
+        "elif",
+        "else",
+        "for",
+        "while",
+        "try",
+        "except",
+        "finally",
+        "with",
+        "as",
+        "import",
+        "from",
+        "return",
+        "yield",
+        "lambda",
+        "and",
+        "or",
+        "not",
+        "in",
+        "is",
+        "None",
+        "True",
+        "False",
+        "pass",
+        "break",
+        "continue",
+        "global",
+        "nonlocal",
+        "assert",
+        "del",
+        "raise",
+      ]
+
+      keywords.forEach((keyword) => {
+        const regex = new RegExp(`\\b${keyword}\\b`, "g")
+        highlighted = highlighted.replace(regex, `<span class="keyword">${keyword}</span>`)
+      })
+
+      // Strings
+      highlighted = highlighted.replace(/(["'])((?:\\.|(?!\1)[^\\])*?)\1/g, '<span class="string">$1$2$1</span>')
+
+      // Numbers
+      highlighted = highlighted.replace(/\b\d+\.?\d*\b/g, '<span class="number">$&</span>')
+
+      // Comments
+      highlighted = highlighted.replace(/#.*$/gm, '<span class="comment">$&</span>')
+
+      // Functions
+      highlighted = highlighted.replace(/\bdef\s+(\w+)/g, 'def <span class="function">$1</span>')
+    }
+
+    return highlighted
+  }
+
+  return (
+    <div
+      dangerouslySetInnerHTML={{
+        __html: highlightCode(code, language),
+      }}
+    />
   )
 }
