@@ -1,55 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import * as monaco from "monaco-editor"
-
-// Configure Monaco Editor workers
-if (typeof window !== "undefined") {
-  // Configure workers for Monaco Editor
-  window.MonacoEnvironment = {
-    getWorker: (workerId, label) => {
-      const getWorkerModule = (moduleUrl: string, fallbackUrl: string) => {
-        return new Worker(new URL(moduleUrl, import.meta.url), {
-          name: label,
-          type: "module",
-        })
-      }
-
-      switch (label) {
-        case "json":
-          return getWorkerModule(
-            "monaco-editor/esm/vs/language/json/json.worker",
-            "monaco-editor/esm/vs/language/json/json.worker.js",
-          )
-        case "css":
-        case "scss":
-        case "less":
-          return getWorkerModule(
-            "monaco-editor/esm/vs/language/css/css.worker",
-            "monaco-editor/esm/vs/language/css/css.worker.js",
-          )
-        case "html":
-        case "handlebars":
-        case "razor":
-          return getWorkerModule(
-            "monaco-editor/esm/vs/language/html/html.worker",
-            "monaco-editor/esm/vs/language/html/html.worker.js",
-          )
-        case "typescript":
-        case "javascript":
-          return getWorkerModule(
-            "monaco-editor/esm/vs/language/typescript/ts.worker",
-            "monaco-editor/esm/vs/language/typescript/ts.worker.js",
-          )
-        default:
-          return getWorkerModule(
-            "monaco-editor/esm/vs/editor/editor.worker",
-            "monaco-editor/esm/vs/editor/editor.worker.js",
-          )
-      }
-    },
-  }
-}
 
 interface MonacoEditorProps {
   value: string
@@ -71,11 +22,62 @@ export default function MonacoEditor({
   disabled = false,
 }: MonacoEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const monacoRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+  const monacoRef = useRef<any>(null)
   const [isEditorReady, setIsEditorReady] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [monaco, setMonaco] = useState<any>(null)
 
   useEffect(() => {
-    if (!editorRef.current) return
+    // Only load Monaco in the browser
+    if (typeof window === "undefined") return
+
+    const loadMonaco = async () => {
+      try {
+        // Configure workers before importing Monaco
+        window.MonacoEnvironment = {
+          getWorker: (workerId: string, label: string) => {
+            const getWorkerModule = (moduleUrl: string) => {
+              return new Worker(new URL(moduleUrl, import.meta.url), {
+                name: label,
+                type: "module",
+              })
+            }
+
+            switch (label) {
+              case "json":
+                return getWorkerModule("monaco-editor/esm/vs/language/json/json.worker")
+              case "css":
+              case "scss":
+              case "less":
+                return getWorkerModule("monaco-editor/esm/vs/language/css/css.worker")
+              case "html":
+              case "handlebars":
+              case "razor":
+                return getWorkerModule("monaco-editor/esm/vs/language/html/html.worker")
+              case "typescript":
+              case "javascript":
+                return getWorkerModule("monaco-editor/esm/vs/language/typescript/ts.worker")
+              default:
+                return getWorkerModule("monaco-editor/esm/vs/editor/editor.worker")
+            }
+          },
+        }
+
+        // Dynamically import Monaco Editor
+        const monacoModule = await import("monaco-editor")
+        setMonaco(monacoModule)
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Failed to load Monaco Editor:", error)
+        setIsLoading(false)
+      }
+    }
+
+    loadMonaco()
+  }, [])
+
+  useEffect(() => {
+    if (!editorRef.current || !monaco || isLoading) return
 
     // Create Monaco Editor
     const editor = monaco.editor.create(editorRef.current, {
@@ -120,7 +122,7 @@ export default function MonacoEditor({
     })
 
     // Handle gutter clicks for breakpoints
-    const gutterClickDisposable = editor.onMouseDown((e) => {
+    const gutterClickDisposable = editor.onMouseDown((e: any) => {
       if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
         const lineNumber = e.target.position?.lineNumber
         if (lineNumber && onBreakpointToggle) {
@@ -134,7 +136,7 @@ export default function MonacoEditor({
       gutterClickDisposable.dispose()
       editor.dispose()
     }
-  }, [language, disabled])
+  }, [monaco, isLoading, language, disabled])
 
   // Update editor value when prop changes
   useEffect(() => {
@@ -148,17 +150,17 @@ export default function MonacoEditor({
 
   // Update language
   useEffect(() => {
-    if (monacoRef.current && isEditorReady) {
+    if (monacoRef.current && isEditorReady && monaco) {
       const model = monacoRef.current.getModel()
       if (model) {
         monaco.editor.setModelLanguage(model, language)
       }
     }
-  }, [language, isEditorReady])
+  }, [language, isEditorReady, monaco])
 
   // Update current line highlighting
   useEffect(() => {
-    if (monacoRef.current && isEditorReady && currentLine > 0) {
+    if (monacoRef.current && isEditorReady && currentLine > 0 && monaco) {
       const decorations = monacoRef.current.deltaDecorations(
         [],
         [
@@ -179,11 +181,11 @@ export default function MonacoEditor({
         }
       }
     }
-  }, [currentLine, isEditorReady])
+  }, [currentLine, isEditorReady, monaco])
 
   // Update breakpoints
   useEffect(() => {
-    if (monacoRef.current && isEditorReady) {
+    if (monacoRef.current && isEditorReady && monaco) {
       const decorations = breakpoints.map((lineNumber) => ({
         range: new monaco.Range(lineNumber, 1, lineNumber, 1),
         options: {
@@ -194,7 +196,31 @@ export default function MonacoEditor({
 
       monacoRef.current.deltaDecorations([], decorations)
     }
-  }, [breakpoints, isEditorReady])
+  }, [breakpoints, isEditorReady, monaco])
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="w-full h-96 border rounded-md overflow-hidden bg-[#1e1e1e] flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+          <p>Loading Monaco Editor...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state if Monaco failed to load
+  if (!monaco) {
+    return (
+      <div className="w-full h-96 border rounded-md overflow-hidden bg-[#1e1e1e] flex items-center justify-center">
+        <div className="text-red-400 text-center">
+          <p>Failed to load Monaco Editor</p>
+          <p className="text-sm mt-2">Please refresh the page</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-96 border rounded-md overflow-hidden">
