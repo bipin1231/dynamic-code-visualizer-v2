@@ -44,117 +44,230 @@ export function useCodeExecution(code: string) {
     setIsRunning(false)
   }
 
+  const parseCodeForExecution = (code: string): ExecutionStep[] => {
+    const lines = code.split("\n")
+    const steps: ExecutionStep[] = []
+    let stepId = 1
+    let timestamp = 0
+
+    // Add program start step
+    steps.push({
+      id: `step-${stepId++}`,
+      line: 1,
+      variables: [],
+      callStack: ["main"],
+      output: "",
+      timestamp: (timestamp += 100),
+      description: "Program execution begins",
+      type: "function_call",
+    })
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      const lineNumber = i + 1
+
+      if (!line || line.startsWith("//")) continue
+
+      // Function declarations
+      if (line.includes("function ") || line.match(/^\s*\w+\s*\(/)) {
+        const functionName = line.match(/function\s+(\w+)/) || line.match(/(\w+)\s*\(/)
+        if (functionName) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Define function: ${functionName[1]}`,
+            type: "function_call",
+          })
+        }
+      }
+
+      // Variable declarations
+      if (line.includes("let ") || line.includes("const ") || line.includes("var ")) {
+        const varMatch = line.match(/(let|const|var)\s+(\w+)\s*=\s*(.+)/)
+        if (varMatch) {
+          const [, type, varName, value] = varMatch
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [{ name: varName, value: value.replace(";", ""), type: "unknown" }],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Declare variable: ${varName} = ${value.replace(";", "")}`,
+            type: "variable_assignment",
+          })
+        }
+      }
+
+      // If statements
+      if (line.includes("if ") && line.includes("(")) {
+        const condition = line.match(/if\s*$$([^)]+)$$/)
+        if (condition) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Evaluate condition: ${condition[1]}`,
+            type: "condition",
+          })
+        }
+      }
+
+      // For loops
+      if (line.includes("for ") && line.includes("(")) {
+        const forMatch = line.match(/for\s*$$([^)]+)$$/)
+        if (forMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Start for loop: ${forMatch[1]}`,
+            type: "loop",
+          })
+        }
+      }
+
+      // While loops
+      if (line.includes("while ") && line.includes("(")) {
+        const whileMatch = line.match(/while\s*$$([^)]+)$$/)
+        if (whileMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Start while loop: ${whileMatch[1]}`,
+            type: "loop",
+          })
+        }
+      }
+
+      // Function calls
+      if (
+        line.includes("(") &&
+        line.includes(")") &&
+        !line.includes("function") &&
+        !line.includes("if") &&
+        !line.includes("for") &&
+        !line.includes("while")
+      ) {
+        const funcCall = line.match(/(\w+)\s*$$[^)]*$$/)
+        if (funcCall) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main", funcCall[1]],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Call function: ${funcCall[0]}`,
+            type: "function_call",
+          })
+        }
+      }
+
+      // Console.log statements
+      if (line.includes("console.log")) {
+        const logMatch = line.match(/console\.log\s*$$([^)]+)$$/)
+        if (logMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: `Output: ${logMatch[1]}`,
+            timestamp: (timestamp += 100),
+            description: `Print to console: ${logMatch[1]}`,
+            type: "output",
+          })
+        }
+      }
+
+      // Return statements
+      if (line.includes("return ")) {
+        const returnMatch = line.match(/return\s+(.+)/)
+        if (returnMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Return value: ${returnMatch[1].replace(";", "")}`,
+            type: "return",
+          })
+        }
+      }
+
+      // Assignment statements (not declarations)
+      if (
+        line.includes("=") &&
+        !line.includes("let") &&
+        !line.includes("const") &&
+        !line.includes("var") &&
+        !line.includes("==") &&
+        !line.includes("===")
+      ) {
+        const assignMatch = line.match(/(\w+)\s*=\s*(.+)/)
+        if (assignMatch) {
+          const [, varName, value] = assignMatch
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [{ name: varName, value: value.replace(";", ""), type: "unknown" }],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Update variable: ${varName} = ${value.replace(";", "")}`,
+            type: "variable_assignment",
+          })
+        }
+      }
+    }
+
+    // Add program end step
+    steps.push({
+      id: `step-${stepId++}`,
+      line: lines.length,
+      variables: [],
+      callStack: [],
+      output: "",
+      timestamp: (timestamp += 100),
+      description: "Program execution completed",
+      type: "return",
+    })
+
+    return steps
+  }
+
   const startDebug = () => {
     setIsDebugging(true)
     setCurrentStep(0)
     setError("")
     setOutput("")
 
-    // Generate execution steps based on code analysis
-    const steps: ExecutionStep[] = generateExecutionSteps()
+    // Generate execution steps based on the actual code
+    const steps: ExecutionStep[] = parseCodeForExecution(code)
 
     setExecutionSteps(steps)
-    setCurrentLine(steps[0]?.line || -1)
-    setVariables(steps[0]?.variables || [])
-    setCallStack(steps[0]?.callStack || [])
-  }
-
-  const generateExecutionSteps = (): ExecutionStep[] => {
-    // This is a simplified simulation - in a real implementation,
-    // you would parse and analyze the actual code
-    return [
-      {
-        id: "step-1",
-        line: 14,
-        variables: [],
-        callStack: ["main"],
-        output: "",
-        timestamp: 0,
-        description: "Program starts execution",
-        type: "function_call",
-      },
-      {
-        id: "step-2",
-        line: 14,
-        variables: [],
-        callStack: ["main", "fibonacci(5)"],
-        output: "",
-        timestamp: 100,
-        description: "Call fibonacci(5)",
-        type: "function_call",
-      },
-      {
-        id: "step-3",
-        line: 1,
-        variables: [{ name: "n", value: 5, type: "number" }],
-        callStack: ["main", "fibonacci(5)"],
-        output: "",
-        timestamp: 200,
-        description: "Enter fibonacci function with n=5",
-        type: "variable_assignment",
-      },
-      {
-        id: "step-4",
-        line: 2,
-        variables: [{ name: "n", value: 5, type: "number" }],
-        callStack: ["main", "fibonacci(5)"],
-        output: "",
-        timestamp: 300,
-        description: "Check condition: n <= 1 (5 <= 1 = false)",
-        type: "condition",
-      },
-      {
-        id: "step-5",
-        line: 5,
-        variables: [
-          { name: "n", value: 5, type: "number" },
-          { name: "a", value: 0, type: "number" },
-        ],
-        callStack: ["main", "fibonacci(5)"],
-        output: "",
-        timestamp: 400,
-        description: "Initialize variable a = 0",
-        type: "variable_assignment",
-      },
-      {
-        id: "step-6",
-        line: 6,
-        variables: [
-          { name: "n", value: 5, type: "number" },
-          { name: "a", value: 0, type: "number" },
-          { name: "b", value: 1, type: "number" },
-        ],
-        callStack: ["main", "fibonacci(5)"],
-        output: "",
-        timestamp: 500,
-        description: "Initialize variable b = 1",
-        type: "variable_assignment",
-      },
-      {
-        id: "step-7",
-        line: 12,
-        variables: [
-          { name: "n", value: 5, type: "number" },
-          { name: "a", value: 3, type: "number" },
-          { name: "b", value: 5, type: "number" },
-        ],
-        callStack: ["main", "fibonacci(5)"],
-        output: "",
-        timestamp: 1500,
-        description: "Return b (5)",
-        type: "return",
-      },
-      {
-        id: "step-8",
-        line: 14,
-        variables: [],
-        callStack: ["main"],
-        output: "Fibonacci of 5: 5",
-        timestamp: 1600,
-        description: "Output result to console",
-        type: "output",
-      },
-    ]
+    if (steps.length > 0) {
+      setCurrentLine(steps[0]?.line || -1)
+      setVariables(steps[0]?.variables || [])
+      setCallStack(steps[0]?.callStack || [])
+    }
   }
 
   const stepForward = () => {

@@ -46,7 +46,6 @@ export default function DebugControls({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="javascript">JavaScript</SelectItem>
-          <SelectItem value="typescript">TypeScript</SelectItem>
           <SelectItem value="python">Python</SelectItem>
           <SelectItem value="java">Java</SelectItem>
           <SelectItem value="cpp">C++</SelectItem>

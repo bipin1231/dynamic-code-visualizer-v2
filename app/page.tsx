@@ -108,7 +108,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Custom Syntax Editor */}
+          {/* Monaco Editor */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>Code Editor</CardTitle>
@@ -126,7 +126,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
             </CardContent>
           </Card>
 
-          {/* Visualization Panel */}
+          {/* Visualization Panel - Now with code prop */}
           <VisualizationPanel
             variables={variables}
             callStack={callStack}
@@ -134,6 +134,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
             error={error}
             currentStep={currentStep}
             executionSteps={executionSteps}
+            code={code}
           />
         </div>
 
