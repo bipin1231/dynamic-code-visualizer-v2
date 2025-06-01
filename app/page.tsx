@@ -108,7 +108,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Monaco Code Editor */}
+          {/* Custom Syntax Editor */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle>Code Editor</CardTitle>
