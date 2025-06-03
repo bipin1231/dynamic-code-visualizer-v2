@@ -10,13 +10,20 @@ const nextConfig = {
     unoptimized: true,
   },
   webpack: (config, { isServer }) => {
-    // Add Monaco Editor webpack configuration
+    // Monaco Editor configuration
     if (!isServer) {
-      config.output.globalObject = 'self';
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+      }
+      
+      config.output.globalObject = 'self'
     }
     
-    return config;
-  },
+    return config
+  }
 }
 
 export default nextConfig

@@ -33,23 +33,15 @@ export default function MonacoEditor({
 
     const loadMonaco = async () => {
       try {
-        // Configure Monaco environment with a simpler worker loader
-        // that doesn't rely on URL objects (which can cause issues)
+        // Simple Monaco environment setup
         window.MonacoEnvironment = {
-          getWorkerUrl: (moduleId, label) => {
-            if (label === "json") {
-              return "/_next/static/chunks/monaco-editor/json.worker.js"
-            }
-            if (label === "css" || label === "scss" || label === "less") {
-              return "/_next/static/chunks/monaco-editor/css.worker.js"
-            }
-            if (label === "html" || label === "handlebars" || label === "razor") {
-              return "/_next/static/chunks/monaco-editor/html.worker.js"
-            }
-            if (label === "typescript" || label === "javascript") {
-              return "/_next/static/chunks/monaco-editor/ts.worker.js"
-            }
-            return "/_next/static/chunks/monaco-editor/editor.worker.js"
+          getWorkerUrl: () => {
+            return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+              self.MonacoEnvironment = {
+                baseUrl: 'https://unpkg.com/monaco-editor@0.45.0/min/'
+              };
+              importScripts('https://unpkg.com/monaco-editor@0.45.0/min/vs/base/worker/workerMain.js');
+            `)}`
           },
         }
 
@@ -126,7 +118,7 @@ export default function MonacoEditor({
       gutterClickDisposable.dispose()
       editor.dispose()
     }
-  }, [monaco, isLoading, language, disabled, value])
+  }, [monaco, isLoading, language, disabled, onChange])
 
   // Update editor value when prop changes
   useEffect(() => {
