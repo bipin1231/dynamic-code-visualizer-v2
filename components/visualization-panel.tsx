@@ -25,7 +25,6 @@ export default function VisualizationPanel({
   executionSteps,
   code,
 }: VisualizationPanelProps) {
-  // Analyze code to generate dynamic explanation
   const analyzeCode = (code: string) => {
     const lines = code.split("\n").filter((line) => line.trim() && !line.trim().startsWith("//"))
     const analysis = {
@@ -39,7 +38,6 @@ export default function VisualizationPanel({
       algorithm: "Unknown",
     }
 
-    // Detect functions
     lines.forEach((line) => {
       const funcMatch =
         line.match(/function\s+(\w+)/) || line.match(/const\s+(\w+)\s*=.*=>/) || line.match(/(\w+)\s*$$[^)]*$$\s*{/)
@@ -47,13 +45,11 @@ export default function VisualizationPanel({
         analysis.functions.push(funcMatch[1])
       }
 
-      // Detect variables
       const varMatch = line.match(/(let|const|var)\s+(\w+)/)
       if (varMatch) {
         analysis.variables.push(varMatch[2])
       }
 
-      // Detect loops
       if (line.includes("for") && line.includes("(")) {
         const forMatch = line.match(/for\s*$$[^)]+$$/)
         if (forMatch) analysis.loops.push("for loop")
@@ -62,18 +58,15 @@ export default function VisualizationPanel({
         analysis.loops.push("while loop")
       }
 
-      // Detect conditions
       if (line.includes("if") && line.includes("(")) {
         analysis.conditions.push("conditional statement")
       }
 
-      // Detect outputs
       if (line.includes("console.log")) {
         analysis.outputs.push("console output")
       }
     })
 
-    // Determine algorithm type and complexity
     const codeText = code.toLowerCase()
 
     if (codeText.includes("fibonacci")) {
@@ -107,7 +100,6 @@ export default function VisualizationPanel({
     return analysis
   }
 
-  // Generate more concise code explanation
   const generateCodeExplanation = () => {
     const analysis = analyzeCode(code)
 
@@ -147,7 +139,6 @@ ${
     `.trim()
   }
 
-  // Generate more concise time complexity analysis
   const generateTimeComplexity = () => {
     const analysis = analyzeCode(code)
 

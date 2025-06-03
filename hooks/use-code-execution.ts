@@ -34,7 +34,6 @@ export function useCodeExecution(code: string) {
           result = executorRef.current.executeJavaScript(code)
           break
         case "python":
-          // Use Piston API for Python instead of built-in interpreter
           result = await executorRef.current.executePistonAPI(code, "python")
           break
         case "c":
@@ -66,7 +65,6 @@ export function useCodeExecution(code: string) {
     setIsRunning(false)
   }
 
-  // Update the startDebug function to support all languages
   const startDebug = (language = "javascript") => {
     setIsDebugging(true)
     setCurrentStep(0)
@@ -83,7 +81,6 @@ export function useCodeExecution(code: string) {
     }
   }
 
-  // Update the parseCodeForExecution function to handle different languages
   const parseCodeForExecution = (code: string, language: string): ExecutionStep[] => {
     const lines = code.split("\n")
     const steps: ExecutionStep[] = []
@@ -107,7 +104,6 @@ export function useCodeExecution(code: string) {
 
       if (!line || line.startsWith("//") || line.startsWith("#")) continue
 
-      // Function declarations (JavaScript)
       if (language === "javascript" && (line.includes("function ") || line.match(/^\s*\w+\s*\(/))) {
         const functionName = line.match(/function\s+(\w+)/) || line.match(/(\w+)\s*\(/)
         if (functionName) {
@@ -124,7 +120,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Python function definitions
       if (language === "python" && line.startsWith("def ")) {
         const functionName = line.match(/def\s+(\w+)/)
         if (functionName) {
@@ -141,7 +136,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // C/C++/Java function definitions
       if (
         (language === "c" || language === "cpp" || language === "java") &&
         line.includes("(") &&
@@ -165,7 +159,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Variable declarations (JavaScript)
       if (language === "javascript" && (line.includes("let ") || line.includes("const ") || line.includes("var "))) {
         const varMatch = line.match(/(let|const|var)\s+(\w+)\s*=\s*(.+)/)
         if (varMatch) {
@@ -183,7 +176,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Variable assignments (all languages)
       if (
         line.includes("=") &&
         !line.includes("==") &&
@@ -210,7 +202,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // If statements (JavaScript, C, C++, Java)
       if (
         (language === "javascript" || language === "c" || language === "cpp" || language === "java") &&
         line.includes("if ") &&
@@ -231,7 +222,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Python if statements
       if (language === "python" && line.startsWith("if ") && line.endsWith(":")) {
         const condition = line.slice(3, -1).trim()
         steps.push({
@@ -246,7 +236,6 @@ export function useCodeExecution(code: string) {
         })
       }
 
-      // For loops (JavaScript, C, C++, Java)
       if (
         (language === "javascript" || language === "c" || language === "cpp" || language === "java") &&
         line.includes("for ") &&
@@ -267,7 +256,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Python for loops
       if (language === "python" && line.startsWith("for ") && line.includes(" in ") && line.endsWith(":")) {
         const forMatch = line.slice(4, -1).trim()
         steps.push({
@@ -282,7 +270,6 @@ export function useCodeExecution(code: string) {
         })
       }
 
-      // While loops (all languages)
       if (line.includes("while ")) {
         if (
           (language === "javascript" || language === "c" || language === "cpp" || language === "java") &&
@@ -318,7 +305,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Console.log statements (JavaScript)
       if (language === "javascript" && line.includes("console.log")) {
         const logMatch = line.match(/console\.log\s*$$([^)]+)$$/)
         if (logMatch) {
@@ -335,7 +321,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Print statements (Python)
       if (language === "python" && line.includes("print(")) {
         const printMatch = line.match(/print\s*$$([^)]+)$$/)
         if (printMatch) {
@@ -352,7 +337,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Printf statements (C, C++)
       if ((language === "c" || language === "cpp") && line.includes("printf(")) {
         const printfMatch = line.match(/printf\s*$$([^)]+)$$/)
         if (printfMatch) {
@@ -369,7 +353,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // System.out.println statements (Java)
       if (language === "java" && line.includes("System.out.println")) {
         const printMatch = line.match(/System\.out\.println\s*$$([^)]+)$$/)
         if (printMatch) {
@@ -386,7 +369,6 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Return statements (all languages)
       if (line.includes("return ")) {
         const returnMatch = line.match(/return\s+(.+)/)
         if (returnMatch) {

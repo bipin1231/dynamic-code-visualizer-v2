@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ArrowRight, ActivityIcon as Function, Variable, GitBranch, RotateCcw, ArrowLeft, Terminal } from "lucide-react"
+import { ArrowRight, Activity, Variable, GitBranch, RotateCcw, ArrowLeft, Terminal } from "lucide-react"
 
 interface ExecutionStep {
   id: string
@@ -25,7 +25,7 @@ interface ExecutionTimelineProps {
 const getStepIcon = (type: string) => {
   switch (type) {
     case "function_call":
-      return <Function className="w-4 h-4" />
+      return <Activity className="w-4 h-4" />
     case "variable_assignment":
       return <Variable className="w-4 h-4" />
     case "condition":
@@ -82,7 +82,6 @@ const getStepBadgeVariant = (type: string) => {
 export default function ExecutionTimeline({ steps, currentStep, onStepClick }: ExecutionTimelineProps) {
   return (
     <div className="space-y-4">
-      {/* Timeline Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h3 className="text-lg font-semibold">Execution Flow</h3>
@@ -108,17 +107,13 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
         </div>
       </div>
 
-      {/* Timeline Visualization */}
       <ScrollArea className="h-64 w-full border rounded-lg p-4">
         <div className="relative">
-          {/* Timeline Line */}
           <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
 
-          {/* Timeline Steps */}
           <div className="space-y-4">
             {steps.map((step, index) => (
               <div key={step.id} className="relative flex items-start gap-4">
-                {/* Step Indicator */}
                 <Button
                   variant={index === currentStep ? "default" : "outline"}
                   size="sm"
@@ -130,7 +125,6 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
                   <div className={`w-3 h-3 rounded-full ${getStepColor(step.type)}`}></div>
                 </Button>
 
-                {/* Step Content */}
                 <div
                   className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${
                     index === currentStep ? "bg-primary/10 border-primary" : ""
@@ -152,7 +146,6 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
 
                   <p className="text-sm font-medium mb-1">{step.description}</p>
 
-                  {/* Variable Changes */}
                   {step.variables.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {step.variables.slice(0, 3).map((variable, varIndex) => (
@@ -168,7 +161,6 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
                     </div>
                   )}
 
-                  {/* Output */}
                   {step.output && <div className="mt-2 p-2 bg-muted rounded text-xs font-mono">{step.output}</div>}
                 </div>
               </div>
@@ -177,7 +169,6 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
         </div>
       </ScrollArea>
 
-      {/* Timeline Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => onStepClick(0)} disabled={currentStep === 0}>

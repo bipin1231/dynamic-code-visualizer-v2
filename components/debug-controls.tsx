@@ -38,8 +38,6 @@ export default function DebugControls({
   onStop,
   onReset,
 }: DebugControlsProps) {
-  // No status indicators needed
-
   return (
     <div className="flex gap-2">
       <Select value={language} onValueChange={onLanguageChange}>

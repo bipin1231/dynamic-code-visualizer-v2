@@ -1,5 +1,4 @@
 export const sampleCodes = {
-  // JavaScript samples
   fibonacci: `function fibonacci(n) {
   if (n <= 1) {
     return n;
@@ -22,7 +21,6 @@ console.log("Fibonacci of 10:", fibonacci(10));`,
   for (let i = 0; i < n - 1; i++) {
     for (let j = 0; j < n - i - 1; j++) {
       if (arr[j] > arr[j + 1]) {
-        // Swap elements
         let temp = arr[j];
         arr[j] = arr[j + 1];
         arr[j + 1] = temp;
@@ -78,7 +76,6 @@ console.log("Array:", sortedArray);
 console.log("Search for 7:", binarySearch(sortedArray, 7));
 console.log("Search for 4:", binarySearch(sortedArray, 4));`,
 
-  // Python samples
   pythonFibonacci: `def fibonacci(n):
     if n <= 1:
         return n
@@ -116,7 +113,6 @@ def factorial_iterative(n):
 print("Recursive factorial of 5:", factorial_recursive(5))
 print("Iterative factorial of 5:", factorial_iterative(5))`,
 
-  // C samples
   cHelloWorld: `#include <stdio.h>
 
 int main() {
@@ -181,7 +177,6 @@ int main() {
     return 0;
 }`,
 
-  // C++ samples
   cppHelloWorld: `#include <iostream>
 using namespace std;
 
@@ -248,7 +243,6 @@ int main() {
     return 0;
 }`,
 
-  // Java samples
   javaHelloWorld: `public class Main {
     public static void main(String[] args) {
         System.out.println("Hello, World!");
