@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react"
 import type { ExecutionStep, Variable } from "@/types/execution"
+import { LanguageExecutor } from "@/lib/language-executors"
 
 export function useCodeExecution(code: string) {
   const [isRunning, setIsRunning] = useState(false)
@@ -17,40 +18,78 @@ export function useCodeExecution(code: string) {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
 
   const autoPlayRef = useRef<NodeJS.Timeout>()
+  const executorRef = useRef(new LanguageExecutor())
 
-  const runCode = async () => {
+  const runCode = async (language = "javascript") => {
     setIsRunning(true)
     setError("")
     setOutput("")
     setCurrentLine(-1)
 
     try {
-      const originalLog = console.log
-      let capturedOutput = ""
+      let result
 
-      console.log = (...args) => {
-        capturedOutput += args.join(" ") + "\n"
-        originalLog(...args)
+      switch (language) {
+        case "javascript":
+          result = executorRef.current.executeJavaScript(code)
+          break
+        case "python":
+          // Use Piston API for Python instead of built-in interpreter
+          result = await executorRef.current.executePistonAPI(code, "python")
+          break
+        case "c":
+          result = await executorRef.current.executeC(code)
+          break
+        case "cpp":
+          result = await executorRef.current.executeCpp(code)
+          break
+        case "java":
+          result = await executorRef.current.executeJava(code)
+          break
+        default:
+          result = {
+            output: "",
+            error: `Language ${language} not supported`,
+            success: false,
+          }
       }
 
-      eval(code)
-      console.log = originalLog
-      setOutput(capturedOutput || "Code executed successfully")
+      if (result.success) {
+        setOutput(result.output + (result.executionTime ? `\n\nExecution time: ${result.executionTime}ms` : ""))
+      } else {
+        setError(result.error)
+      }
     } catch (err: any) {
-      setError(err.message)
-      console.log = console.log
+      setError(err.message || "Execution failed")
     }
 
     setIsRunning(false)
   }
 
-  const parseCodeForExecution = (code: string): ExecutionStep[] => {
+  // Update the startDebug function to support all languages
+  const startDebug = (language = "javascript") => {
+    setIsDebugging(true)
+    setCurrentStep(0)
+    setError("")
+    setOutput("")
+
+    const steps: ExecutionStep[] = parseCodeForExecution(code, language)
+    setExecutionSteps(steps)
+
+    if (steps.length > 0) {
+      setCurrentLine(steps[0]?.line || -1)
+      setVariables(steps[0]?.variables || [])
+      setCallStack(steps[0]?.callStack || [])
+    }
+  }
+
+  // Update the parseCodeForExecution function to handle different languages
+  const parseCodeForExecution = (code: string, language: string): ExecutionStep[] => {
     const lines = code.split("\n")
     const steps: ExecutionStep[] = []
     let stepId = 1
     let timestamp = 0
 
-    // Add program start step
     steps.push({
       id: `step-${stepId++}`,
       line: 1,
@@ -66,10 +105,10 @@ export function useCodeExecution(code: string) {
       const line = lines[i].trim()
       const lineNumber = i + 1
 
-      if (!line || line.startsWith("//")) continue
+      if (!line || line.startsWith("//") || line.startsWith("#")) continue
 
-      // Function declarations
-      if (line.includes("function ") || line.match(/^\s*\w+\s*\(/)) {
+      // Function declarations (JavaScript)
+      if (language === "javascript" && (line.includes("function ") || line.match(/^\s*\w+\s*\(/))) {
         const functionName = line.match(/function\s+(\w+)/) || line.match(/(\w+)\s*\(/)
         if (functionName) {
           steps.push({
@@ -85,8 +124,49 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Variable declarations
-      if (line.includes("let ") || line.includes("const ") || line.includes("var ")) {
+      // Python function definitions
+      if (language === "python" && line.startsWith("def ")) {
+        const functionName = line.match(/def\s+(\w+)/)
+        if (functionName) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Define function: ${functionName[1]}`,
+            type: "function_call",
+          })
+        }
+      }
+
+      // C/C++/Java function definitions
+      if (
+        (language === "c" || language === "cpp" || language === "java") &&
+        line.includes("(") &&
+        line.includes(")") &&
+        !line.includes("if") &&
+        !line.includes("for") &&
+        !line.includes("while")
+      ) {
+        const functionMatch = line.match(/(\w+)\s+(\w+)\s*\(/)
+        if (functionMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Define function: ${functionMatch[2]}`,
+            type: "function_call",
+          })
+        }
+      }
+
+      // Variable declarations (JavaScript)
+      if (language === "javascript" && (line.includes("let ") || line.includes("const ") || line.includes("var "))) {
         const varMatch = line.match(/(let|const|var)\s+(\w+)\s*=\s*(.+)/)
         if (varMatch) {
           const [, type, varName, value] = varMatch
@@ -103,8 +183,39 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // If statements
-      if (line.includes("if ") && line.includes("(")) {
+      // Variable assignments (all languages)
+      if (
+        line.includes("=") &&
+        !line.includes("==") &&
+        !line.includes("!=") &&
+        !line.includes("<=") &&
+        !line.includes(">=")
+      ) {
+        const assignMatch = line.match(/(\w+)\s*=\s*(.+)/)
+        if (
+          assignMatch &&
+          !(language === "javascript" && (line.includes("let") || line.includes("const") || line.includes("var")))
+        ) {
+          const [, varName, value] = assignMatch
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [{ name: varName, value: value.replace(";", ""), type: "unknown" }],
+            callStack: ["main"],
+            output: "",
+            timestamp: (timestamp += 100),
+            description: `Assign variable: ${varName} = ${value.replace(";", "")}`,
+            type: "variable_assignment",
+          })
+        }
+      }
+
+      // If statements (JavaScript, C, C++, Java)
+      if (
+        (language === "javascript" || language === "c" || language === "cpp" || language === "java") &&
+        line.includes("if ") &&
+        line.includes("(")
+      ) {
         const condition = line.match(/if\s*$$([^)]+)$$/)
         if (condition) {
           steps.push({
@@ -120,8 +231,27 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // For loops
-      if (line.includes("for ") && line.includes("(")) {
+      // Python if statements
+      if (language === "python" && line.startsWith("if ") && line.endsWith(":")) {
+        const condition = line.slice(3, -1).trim()
+        steps.push({
+          id: `step-${stepId++}`,
+          line: lineNumber,
+          variables: [],
+          callStack: ["main"],
+          output: "",
+          timestamp: (timestamp += 100),
+          description: `Evaluate condition: ${condition}`,
+          type: "condition",
+        })
+      }
+
+      // For loops (JavaScript, C, C++, Java)
+      if (
+        (language === "javascript" || language === "c" || language === "cpp" || language === "java") &&
+        line.includes("for ") &&
+        line.includes("(")
+      ) {
         const forMatch = line.match(/for\s*$$([^)]+)$$/)
         if (forMatch) {
           steps.push({
@@ -137,49 +267,59 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // While loops
-      if (line.includes("while ") && line.includes("(")) {
-        const whileMatch = line.match(/while\s*$$([^)]+)$$/)
-        if (whileMatch) {
-          steps.push({
-            id: `step-${stepId++}`,
-            line: lineNumber,
-            variables: [],
-            callStack: ["main"],
-            output: "",
-            timestamp: (timestamp += 100),
-            description: `Start while loop: ${whileMatch[1]}`,
-            type: "loop",
-          })
+      // Python for loops
+      if (language === "python" && line.startsWith("for ") && line.includes(" in ") && line.endsWith(":")) {
+        const forMatch = line.slice(4, -1).trim()
+        steps.push({
+          id: `step-${stepId++}`,
+          line: lineNumber,
+          variables: [],
+          callStack: ["main"],
+          output: "",
+          timestamp: (timestamp += 100),
+          description: `Start for loop: ${forMatch}`,
+          type: "loop",
+        })
+      }
+
+      // While loops (all languages)
+      if (line.includes("while ")) {
+        if (
+          (language === "javascript" || language === "c" || language === "cpp" || language === "java") &&
+          line.includes("(")
+        ) {
+          const whileMatch = line.match(/while\s*$$([^)]+)$$/)
+          if (whileMatch) {
+            steps.push({
+              id: `step-${stepId++}`,
+              line: lineNumber,
+              variables: [],
+              callStack: ["main"],
+              output: "",
+              timestamp: (timestamp += 100),
+              description: `Start while loop: ${whileMatch[1]}`,
+              type: "loop",
+            })
+          }
+        } else if (language === "python" && line.endsWith(":")) {
+          const whileMatch = line.match(/while\s+(.+):/)
+          if (whileMatch) {
+            steps.push({
+              id: `step-${stepId++}`,
+              line: lineNumber,
+              variables: [],
+              callStack: ["main"],
+              output: "",
+              timestamp: (timestamp += 100),
+              description: `Start while loop: ${whileMatch[1]}`,
+              type: "loop",
+            })
+          }
         }
       }
 
-      // Function calls
-      if (
-        line.includes("(") &&
-        line.includes(")") &&
-        !line.includes("function") &&
-        !line.includes("if") &&
-        !line.includes("for") &&
-        !line.includes("while")
-      ) {
-        const funcCall = line.match(/(\w+)\s*$$[^)]*$$/)
-        if (funcCall) {
-          steps.push({
-            id: `step-${stepId++}`,
-            line: lineNumber,
-            variables: [],
-            callStack: ["main", funcCall[1]],
-            output: "",
-            timestamp: (timestamp += 100),
-            description: `Call function: ${funcCall[0]}`,
-            type: "function_call",
-          })
-        }
-      }
-
-      // Console.log statements
-      if (line.includes("console.log")) {
+      // Console.log statements (JavaScript)
+      if (language === "javascript" && line.includes("console.log")) {
         const logMatch = line.match(/console\.log\s*$$([^)]+)$$/)
         if (logMatch) {
           steps.push({
@@ -195,7 +335,58 @@ export function useCodeExecution(code: string) {
         }
       }
 
-      // Return statements
+      // Print statements (Python)
+      if (language === "python" && line.includes("print(")) {
+        const printMatch = line.match(/print\s*$$([^)]+)$$/)
+        if (printMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: `Output: ${printMatch[1]}`,
+            timestamp: (timestamp += 100),
+            description: `Print: ${printMatch[1]}`,
+            type: "output",
+          })
+        }
+      }
+
+      // Printf statements (C, C++)
+      if ((language === "c" || language === "cpp") && line.includes("printf(")) {
+        const printfMatch = line.match(/printf\s*$$([^)]+)$$/)
+        if (printfMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: `Output: ${printfMatch[1]}`,
+            timestamp: (timestamp += 100),
+            description: `Print: ${printfMatch[1]}`,
+            type: "output",
+          })
+        }
+      }
+
+      // System.out.println statements (Java)
+      if (language === "java" && line.includes("System.out.println")) {
+        const printMatch = line.match(/System\.out\.println\s*$$([^)]+)$$/)
+        if (printMatch) {
+          steps.push({
+            id: `step-${stepId++}`,
+            line: lineNumber,
+            variables: [],
+            callStack: ["main"],
+            output: `Output: ${printMatch[1]}`,
+            timestamp: (timestamp += 100),
+            description: `Print: ${printMatch[1]}`,
+            type: "output",
+          })
+        }
+      }
+
+      // Return statements (all languages)
       if (line.includes("return ")) {
         const returnMatch = line.match(/return\s+(.+)/)
         if (returnMatch) {
@@ -211,34 +402,8 @@ export function useCodeExecution(code: string) {
           })
         }
       }
-
-      // Assignment statements (not declarations)
-      if (
-        line.includes("=") &&
-        !line.includes("let") &&
-        !line.includes("const") &&
-        !line.includes("var") &&
-        !line.includes("==") &&
-        !line.includes("===")
-      ) {
-        const assignMatch = line.match(/(\w+)\s*=\s*(.+)/)
-        if (assignMatch) {
-          const [, varName, value] = assignMatch
-          steps.push({
-            id: `step-${stepId++}`,
-            line: lineNumber,
-            variables: [{ name: varName, value: value.replace(";", ""), type: "unknown" }],
-            callStack: ["main"],
-            output: "",
-            timestamp: (timestamp += 100),
-            description: `Update variable: ${varName} = ${value.replace(";", "")}`,
-            type: "variable_assignment",
-          })
-        }
-      }
     }
 
-    // Add program end step
     steps.push({
       id: `step-${stepId++}`,
       line: lines.length,
@@ -251,23 +416,6 @@ export function useCodeExecution(code: string) {
     })
 
     return steps
-  }
-
-  const startDebug = () => {
-    setIsDebugging(true)
-    setCurrentStep(0)
-    setError("")
-    setOutput("")
-
-    // Generate execution steps based on the actual code
-    const steps: ExecutionStep[] = parseCodeForExecution(code)
-
-    setExecutionSteps(steps)
-    if (steps.length > 0) {
-      setCurrentLine(steps[0]?.line || -1)
-      setVariables(steps[0]?.variables || [])
-      setCallStack(steps[0]?.callStack || [])
-    }
   }
 
   const stepForward = () => {

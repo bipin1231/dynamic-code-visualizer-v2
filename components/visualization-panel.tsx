@@ -200,7 +200,7 @@ ${
   return (
     <Card className="lg:col-span-1">
       <CardHeader>
-        <CardTitle>Execution Visualization</CardTitle>
+        <CardTitle>Result</CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="output" className="w-full">

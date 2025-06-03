@@ -64,7 +64,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Code Visualizer</h1>
+          <h1 className="text-3xl font-bold">Dynamic Code Visualizer</h1>
           <DebugControls
             language={language}
             onLanguageChange={setLanguage}
@@ -89,6 +89,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
           isDebugging={isDebugging}
           executionSpeed={executionSpeed}
           onSpeedChange={setExecutionSpeed}
+          language={language}
         />
 
         {/* Execution Timeline */}
@@ -126,7 +127,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
             </CardContent>
           </Card>
 
-          {/* Visualization Panel - Now with code prop */}
+          {/* Visualization Panel */}
           <VisualizationPanel
             variables={variables}
             callStack={callStack}

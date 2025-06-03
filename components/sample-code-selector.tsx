@@ -12,6 +12,7 @@ interface SampleCodeSelectorProps {
   isDebugging: boolean
   executionSpeed: number
   onSpeedChange: (speed: number) => void
+  language: string
 }
 
 export default function SampleCodeSelector({
@@ -19,6 +20,7 @@ export default function SampleCodeSelector({
   isDebugging,
   executionSpeed,
   onSpeedChange,
+  language,
 }: SampleCodeSelectorProps) {
   const loadSampleCode = (sample: string) => {
     const code = sampleCodes[sample as keyof typeof sampleCodes]
@@ -27,29 +29,60 @@ export default function SampleCodeSelector({
     }
   }
 
+  const getLanguageSamples = () => {
+    switch (language) {
+      case "javascript":
+        return [
+          { key: "fibonacci", label: "Fibonacci" },
+          { key: "bubbleSort", label: "Bubble Sort" },
+          { key: "factorial", label: "Factorial" },
+          { key: "binarySearch", label: "Binary Search" },
+        ]
+      case "python":
+        return [
+          { key: "pythonFibonacci", label: "Fibonacci" },
+          { key: "pythonBubbleSort", label: "Bubble Sort" },
+          { key: "pythonFactorial", label: "Factorial" },
+        ]
+      case "c":
+        return [
+          { key: "cHelloWorld", label: "Hello World" },
+          { key: "cFibonacci", label: "Fibonacci" },
+          { key: "cBubbleSort", label: "Bubble Sort" },
+        ]
+      case "cpp":
+        return [
+          { key: "cppHelloWorld", label: "Hello World" },
+          { key: "cppFibonacci", label: "Fibonacci" },
+          { key: "cppBubbleSort", label: "Bubble Sort" },
+        ]
+      case "java":
+        return [
+          { key: "javaHelloWorld", label: "Hello World" },
+          { key: "javaFibonacci", label: "Fibonacci" },
+          { key: "javaBubbleSort", label: "Bubble Sort" },
+        ]
+      default:
+        return []
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Settings className="w-5 h-5" />
-          Sample Code & Settings
+          Sample Code
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4">
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => loadSampleCode("fibonacci")}>
-              Fibonacci
-            </Button>
-            <Button variant="outline" onClick={() => loadSampleCode("bubbleSort")}>
-              Bubble Sort
-            </Button>
-            <Button variant="outline" onClick={() => loadSampleCode("factorial")}>
-              Factorial
-            </Button>
-            <Button variant="outline" onClick={() => loadSampleCode("binarySearch")}>
-              Binary Search
-            </Button>
+            {getLanguageSamples().map((sample) => (
+              <Button key={sample.key} variant="outline" onClick={() => loadSampleCode(sample.key)}>
+                {sample.label}
+              </Button>
+            ))}
           </div>
           {isDebugging && (
             <>

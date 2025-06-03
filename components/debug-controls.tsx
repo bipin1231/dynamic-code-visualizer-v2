@@ -13,8 +13,8 @@ interface DebugControlsProps {
   currentStep: number
   executionSteps: ExecutionStep[]
   isAutoPlaying: boolean
-  onRun: () => void
-  onStartDebug: () => void
+  onRun: (language: string) => void
+  onStartDebug: (language: string) => void
   onStepForward: () => void
   onStepBackward: () => void
   onToggleAutoPlay: () => void
@@ -38,26 +38,34 @@ export default function DebugControls({
   onStop,
   onReset,
 }: DebugControlsProps) {
+  // No status indicators needed
+
   return (
     <div className="flex gap-2">
       <Select value={language} onValueChange={onLanguageChange}>
-        <SelectTrigger className="w-32">
+        <SelectTrigger className="w-40">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="javascript">JavaScript</SelectItem>
           <SelectItem value="python">Python</SelectItem>
-          <SelectItem value="java">Java</SelectItem>
+          <SelectItem value="c">C</SelectItem>
           <SelectItem value="cpp">C++</SelectItem>
+          <SelectItem value="java">Java</SelectItem>
         </SelectContent>
       </Select>
 
-      <Button onClick={onRun} disabled={isRunning || isDebugging} className="gap-2">
+      <Button onClick={() => onRun(language)} disabled={isRunning || isDebugging} className="gap-2">
         <Play className="w-4 h-4" />
         Run
       </Button>
 
-      <Button onClick={onStartDebug} disabled={isRunning || isDebugging} variant="outline" className="gap-2">
+      <Button
+        onClick={() => onStartDebug(language)}
+        disabled={isRunning || isDebugging}
+        variant="outline"
+        className="gap-2"
+      >
         <Bug className="w-4 h-4" />
         Debug
       </Button>
