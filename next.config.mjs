@@ -11,7 +11,7 @@ const nextConfig = {
     unoptimized: true,
   },
   webpack: (config) => {
-    // Fix for the ESM URL scheme error
+    // Fix for the ESM URL scheme error on Windows
     config.resolve.extensionAlias = {
       '.js': ['.js', '.ts', '.tsx'],
       '.jsx': ['.jsx', '.tsx'],
