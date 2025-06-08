@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -80,6 +81,19 @@ const getStepBadgeVariant = (type: string) => {
 }
 
 export default function ExecutionTimeline({ steps, currentStep, onStepClick }: ExecutionTimelineProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const currentStepRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to current step
+  useEffect(() => {
+    if (currentStepRef.current && scrollAreaRef.current) {
+      currentStepRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      })
+    }
+  }, [currentStep])
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -107,31 +121,35 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
         </div>
       </div>
 
-      <ScrollArea className="h-64 w-full border rounded-lg p-4">
+      <ScrollArea ref={scrollAreaRef} className="h-64 w-full border rounded-lg p-4">
         <div className="relative">
-          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
+          <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-border"></div>
 
-          <div className="space-y-4">
+          <div className="space-y-2">
             {steps.map((step, index) => (
-              <div key={step.id} className="relative flex items-start gap-4">
+              <div
+                key={step.id}
+                className="relative flex items-start gap-3"
+                ref={index === currentStep ? currentStepRef : null}
+              >
                 <Button
                   variant={index === currentStep ? "default" : "outline"}
                   size="sm"
-                  className={`relative z-10 w-12 h-12 rounded-full p-0 ${
+                  className={`relative z-10 w-10 h-10 rounded-full p-0 ${
                     index === currentStep ? "ring-2 ring-primary ring-offset-2" : ""
                   } ${index < currentStep ? "opacity-60" : ""}`}
                   onClick={() => onStepClick(index)}
                 >
-                  <div className={`w-3 h-3 rounded-full ${getStepColor(step.type)}`}></div>
+                  <div className={`w-2.5 h-2.5 rounded-full ${getStepColor(step.type)}`}></div>
                 </Button>
 
                 <div
-                  className={`flex-1 p-3 border rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${
+                  className={`flex-1 p-2 border rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${
                     index === currentStep ? "bg-primary/10 border-primary" : ""
                   } ${index < currentStep ? "opacity-60" : ""}`}
                   onClick={() => onStepClick(index)}
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       {getStepIcon(step.type)}
                       <Badge variant={getStepBadgeVariant(step.type)} className="text-xs">
@@ -147,7 +165,7 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
                   <p className="text-sm font-medium mb-1">{step.description}</p>
 
                   {step.variables.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {step.variables.slice(0, 3).map((variable, varIndex) => (
                         <Badge key={varIndex} variant="secondary" className="text-xs">
                           {variable.name}: {JSON.stringify(variable.value)}
@@ -161,7 +179,7 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
                     </div>
                   )}
 
-                  {step.output && <div className="mt-2 p-2 bg-muted rounded text-xs font-mono">{step.output}</div>}
+                  {step.output && <div className="mt-1 p-2 bg-muted rounded text-xs font-mono">{step.output}</div>}
                 </div>
               </div>
             ))}
