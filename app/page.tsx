@@ -79,8 +79,6 @@ export default function LandingPage() {
     "Bubble Sort Algorithm",
     "Binary Search",
     "Factorial Calculation",
-    "Quick Sort",
-    "Merge Sort",
   ]
 
   useEffect(() => {
