@@ -95,12 +95,12 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
         {/* Execution Timeline */}
         {isDebugging && executionSteps.length > 0 && (
           <Card>
-            <CardHeader>
+            {/* <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
                 Execution Timeline
               </CardTitle>
-            </CardHeader>
+            </CardHeader> */}
             <CardContent>
               <ExecutionTimeline steps={executionSteps} currentStep={currentStep} onStepClick={jumpToStep} />
             </CardContent>

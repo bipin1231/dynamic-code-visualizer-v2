@@ -14,6 +14,18 @@ interface MonacoEditorProps {
   disabled?: boolean
 }
 
+// Move mapLanguage above all hooks
+const mapLanguage = (lang: string): string => {
+  const languageMap: Record<string, string> = {
+    javascript: "javascript",
+    python: "python",
+    c: "c",
+    cpp: "cpp",
+    java: "java",
+  }
+  return languageMap[lang] || "plaintext"
+}
+
 export default function MonacoEditor({
   value,
   onChange,
@@ -45,14 +57,19 @@ export default function MonacoEditor({
 
   // Initialize editor
   useEffect(() => {
-    if (isLoaded && containerRef.current && monacoRef.current && !editorRef.current) {
+    if (
+      isLoaded &&
+      containerRef.current &&
+      monacoRef.current &&
+      !editorRef.current
+    ) {
       const monaco = monacoRef.current
 
       // Define editor options
       const options: editor.IStandaloneEditorConstructionOptions = {
         value,
         language: mapLanguage(language),
-        theme: "vs-dark",
+        theme: "vs",
         automaticLayout: true,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
@@ -74,7 +91,10 @@ export default function MonacoEditor({
 
       // Handle breakpoint clicks
       editor.onMouseDown((e) => {
-        if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && onBreakpointToggle) {
+        if (
+          e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN &&
+          onBreakpointToggle
+        ) {
           const lineNumber = e.target.position?.lineNumber
           if (lineNumber) {
             onBreakpointToggle(lineNumber)
@@ -115,7 +135,11 @@ export default function MonacoEditor({
 
   // Update current line highlight
   useEffect(() => {
-    if (editorRef.current && monacoRef.current && currentLine > 0) {
+    if (
+      editorRef.current &&
+      monacoRef.current &&
+      currentLine > 0
+    ) {
       const monaco = monacoRef.current
       const editor = editorRef.current
 
@@ -149,7 +173,10 @@ export default function MonacoEditor({
       const editor = editorRef.current
 
       // Remove previous breakpoint decorations
-      breakpointDecorationIdsRef.current = editor.deltaDecorations(breakpointDecorationIdsRef.current, [])
+      breakpointDecorationIdsRef.current = editor.deltaDecorations(
+        breakpointDecorationIdsRef.current,
+        []
+      )
 
       // Add new breakpoint decorations
       const breakpointDecorations = breakpoints.map((lineNumber) => ({
@@ -160,22 +187,12 @@ export default function MonacoEditor({
         },
       }))
 
-      breakpointDecorationIdsRef.current = editor.deltaDecorations([], breakpointDecorations)
+      breakpointDecorationIdsRef.current = editor.deltaDecorations(
+        [],
+        breakpointDecorations
+      )
     }
   }, [breakpoints])
-
-  // Map language names to Monaco language identifiers
-  const mapLanguage = (lang: string): string => {
-    const languageMap: Record<string, string> = {
-      javascript: "javascript",
-      python: "python",
-      c: "c",
-      cpp: "cpp",
-      java: "java",
-    }
-
-    return languageMap[lang] || "plaintext"
-  }
 
   return (
     <div className="w-full h-96 border rounded-md overflow-hidden relative">
