@@ -8,6 +8,7 @@ import ExecutionTimeline from "@/components/execution-timeline"
 import DebugControls from "@/components/debug-controls"
 import VisualizationPanel from "@/components/visualization-panel"
 import SampleCodeSelector from "@/components/sample-code-selector"
+import NewExplationModule from "@/components/NewExplationModule"
 import { useCodeExecution } from "@/hooks/use-code-execution"
 import Link from "next/link"
 
@@ -139,6 +140,12 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
               code={code}
             />
           )}
+        </div>
+
+        <div>
+          <NewExplationModule
+          initialCode={code}
+          />
         </div>
 
         {/* Visualization Panel when debugging */}
