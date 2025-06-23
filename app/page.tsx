@@ -125,14 +125,14 @@ export default function LandingPage() {
             </div>
 
             {/* Hero Image */}
-            <div className="mt-16 relative">
+            {/* <div className="mt-16 relative">
               <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10"></div>
               <img
                 src="/placeholder.svg?height=600&width=1000"
                 alt="Code Visualizer Interface"
                 className="mx-auto rounded-lg shadow-2xl border"
               />
-            </div>
+            </div> */}
           </div>
         </div>
       </section>

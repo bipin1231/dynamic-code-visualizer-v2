@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock } from "lucide-react"
 import MonacoEditor from "@/components/monaco-editor"
@@ -10,6 +10,9 @@ import VisualizationPanel from "@/components/visualization-panel"
 import SampleCodeSelector from "@/components/sample-code-selector"
 import NewExplationModule from "@/components/NewExplationModule"
 import { useCodeExecution } from "@/hooks/use-code-execution"
+import { generateFlowchart } from "@/components/flowchart"
+import { FlowchartView } from "@/components/FlowchartView"
+
 import Link from "next/link"
 
 export default function CodeVisualizer() {
@@ -31,6 +34,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
 
   const [language, setLanguage] = useState("javascript")
   const [breakpoints, setBreakpoints] = useState<number[]>([])
+  const [flowchartData, setFlowchartData] = useState<{ nodes: any[]; edges: any[] } | null>(null)
 
   const {
     isRunning,
@@ -60,6 +64,15 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
       prev.includes(lineNumber) ? prev.filter((bp) => bp !== lineNumber) : [...prev, lineNumber],
     )
   }
+
+  useEffect(() => {
+  if (isDebugging) {
+    const flowchart = generateFlowchart(code)
+    setFlowchartData(flowchart)
+  } else {
+    setFlowchartData(null)
+  }
+}, [isDebugging, code])
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -161,8 +174,21 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
           />
         )}
 
+{isDebugging && flowchartData && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Flowchart</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <FlowchartView nodes={flowchartData.nodes} edges={flowchartData.edges} />
+    </CardContent>
+  </Card>
+)}
+
+
+
         {/* Debug Information */}
-        {isDebugging && (
+        {/* {isDebugging && (
           <Card>
             <CardHeader>
               <CardTitle>Debug Information</CardTitle>
@@ -192,7 +218,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
       </div>
     </div>
   )
