@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button"
 
 export default function NewExplanationModule({ initialCode }: { initialCode: string }) {
   const [code, setCode] = useState(initialCode);
@@ -45,11 +46,11 @@ try{
     <div>
   
       <div className="my-4 space-x-2">
-        <button onClick={() => setMode("timeComplexity")} className={mode === "timeComplexity" ? "font-bold" : ""}>Time Complexity</button>
-        <button onClick={() => setMode("explanation")} className={mode === "explanation" ? "font-bold" : ""}>Explanation</button>
-        <button onClick={() => setMode("chat")} className={mode === "chat" ? "font-bold" : ""}>Chat</button>
+        <Button onClick={() => setMode("timeComplexity")} className={mode === "timeComplexity" ? "font-bold" : ""}>Time Complexity</Button>
+        <Button onClick={() => setMode("explanation")} className={mode === "explanation" ? "font-bold" : ""}>Explanation</Button>
+        <Button onClick={() => setMode("chat")} className={mode === "chat" ? "font-bold" : ""}>Chat</Button>
   
-        <button onClick={() => setMode("quiz")} className={mode === "quiz" ? "font-bold" : ""}>Quiz</button>
+        <Button onClick={() => setMode("quiz")} className={mode === "quiz" ? "font-bold" : ""}>Quiz</Button>
       </div>
 
       {mode === "chat" && (

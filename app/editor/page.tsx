@@ -119,6 +119,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
             <CardContent>
               <MonacoEditor
                 value={code}
+                theme="vs"
                 onChange={setCode}
                 language={language}
                 currentLine={currentLine}
