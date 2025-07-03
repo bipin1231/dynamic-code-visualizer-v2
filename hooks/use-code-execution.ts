@@ -4,8 +4,6 @@ import { useState, useRef } from "react"
 import type { ExecutionStep, Variable } from "@/types/execution"
 import { LanguageExecutor } from "@/lib/language-executors"
 
-const MAX_ITERATIONS = 10 // Prevent infinite loops in visualization
-
 interface ExecutionState {
   variables: Map<string, any>
   output: string[]
@@ -14,7 +12,7 @@ interface ExecutionState {
   timestamp: number
 }
 
-class CodeExecutionSimulator {
+class AdvancedCodeExecutionSimulator {
   private state: ExecutionState
   private steps: ExecutionStep[]
   private language: string
@@ -51,11 +49,23 @@ class CodeExecutionSimulator {
       output: "",
     })
 
-    if (this.language === "javascript") {
-      this.simulateJavaScript(code)
-    } else {
-      // For other languages, fall back to simple line-by-line parsing
-      this.simulateGeneric(code)
+    try {
+      if (this.language === "javascript") {
+        this.simulateJavaScript(code)
+      } else if (this.language === "python") {
+        this.simulatePython(code)
+      } else {
+        this.simulateGeneric(code)
+      }
+    } catch (error) {
+      this.addStep({
+        line: this.state.currentLine,
+        description: `Error: ${error}`,
+        type: "output",
+        variables: this.getVariablesArray(),
+        callStack: ["main"],
+        output: `Error: ${error}`,
+      })
     }
 
     // Add final step
@@ -72,130 +82,202 @@ class CodeExecutionSimulator {
   }
 
   private simulateJavaScript(code: string) {
-    const lines = code.split("\n")
-    let lineIndex = 0
+    const lines = code
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("//"))
 
-    while (lineIndex < lines.length) {
-      const line = lines[lineIndex].trim()
-      this.state.currentLine = lineIndex + 1
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      this.state.currentLine = i + 1
 
-      if (!line || line.startsWith("//")) {
-        lineIndex++
-        continue
-      }
-
-      try {
-        lineIndex = this.processJavaScriptLine(line, lines, lineIndex)
-      } catch (error) {
-        this.addStep({
-          line: this.state.currentLine,
-          description: `Error: ${error}`,
-          type: "error",
-          variables: this.getVariablesArray(),
-          callStack: ["main"],
-          output: this.state.output.join("\n"),
-        })
-        break
-      }
-
-      lineIndex++
+      this.processJavaScriptLine(line, lines, i)
     }
   }
 
-  private processJavaScriptLine(line: string, lines: string[], currentIndex: number): number {
-    // Variable declarations and assignments
+  private simulatePython(code: string) {
+    const lines = code
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"))
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      this.state.currentLine = i + 1
+
+      this.processPythonLine(line, lines, i)
+    }
+  }
+
+  private processJavaScriptLine(line: string, lines: string[], index: number) {
+    // Variable declarations
     if (line.match(/(let|const|var)\s+(\w+)\s*=\s*(.+)/)) {
       const match = line.match(/(let|const|var)\s+(\w+)\s*=\s*(.+)/)!
-      const varName = match[2]
-      const expression = match[3].replace(";", "")
-      const value = this.evaluateExpression(expression)
+      const [, keyword, varName, expression] = match
+      const value = this.evaluateExpression(expression.replace(";", ""))
 
       this.state.variables.set(varName, value)
 
       this.addStep({
         line: this.state.currentLine,
-        description: `Declare variable: ${varName} = ${value}`,
+        description: `Declare variable: ${varName} = ${this.formatValue(value)}`,
         type: "variable_assignment",
         variables: this.getVariablesArray(),
         callStack: ["main"],
         output: this.state.output.join("\n"),
       })
-
-      return currentIndex
+      return
     }
 
-    // Variable assignments (without declaration)
-    if (line.match(/^\s*(\w+)\s*=\s*(.+)/)) {
+    // Variable assignments
+    if (line.match(/^\s*(\w+)\s*=\s*(.+)/) && !line.includes("==")) {
       const match = line.match(/^\s*(\w+)\s*=\s*(.+)/)!
-      const varName = match[1]
-      const expression = match[2].replace(";", "")
-      const value = this.evaluateExpression(expression)
+      const [, varName, expression] = match
+      const value = this.evaluateExpression(expression.replace(";", ""))
 
       this.state.variables.set(varName, value)
 
       this.addStep({
         line: this.state.currentLine,
-        description: `Assign: ${varName} = ${value}`,
+        description: `Assign: ${varName} = ${this.formatValue(value)}`,
         type: "variable_assignment",
         variables: this.getVariablesArray(),
         callStack: ["main"],
         output: this.state.output.join("\n"),
       })
-
-      return currentIndex
+      return
     }
 
     // For loops
     if (line.match(/for\s*\(/)) {
-      return this.processForLoop(line, lines, currentIndex)
+      this.processJavaScriptForLoop(line, lines, index)
+      return
     }
 
     // While loops
     if (line.match(/while\s*\(/)) {
-      return this.processWhileLoop(line, lines, currentIndex)
+      this.processJavaScriptWhileLoop(line, lines, index)
+      return
     }
 
     // If statements
     if (line.match(/if\s*\(/)) {
-      return this.processIfStatement(line, lines, currentIndex)
+      this.processJavaScriptIfStatement(line, lines, index)
+      return
     }
 
-    // Console.log statements
+    // Console.log
     if (line.includes("console.log")) {
       const match = line.match(/console\.log\s*$$\s*([^)]+)\s*$$/)
       if (match) {
         const expression = match[1]
         const value = this.evaluateExpression(expression)
-        this.state.output.push(String(value))
+        const output = this.formatValue(value)
+
+        this.state.output.push(output)
 
         this.addStep({
           line: this.state.currentLine,
-          description: `Print: ${value}`,
+          description: `Print: ${output}`,
           type: "output",
           variables: this.getVariablesArray(),
           callStack: ["main"],
           output: this.state.output.join("\n"),
         })
       }
-      return currentIndex
+      return
     }
 
     // Function calls and other statements
     this.addStep({
       line: this.state.currentLine,
       description: `Execute: ${line}`,
-      type: "statement",
+      type: "function_call",
       variables: this.getVariablesArray(),
       callStack: ["main"],
       output: this.state.output.join("\n"),
     })
-
-    return currentIndex
   }
 
-  private processForLoop(line: string, lines: string[], startIndex: number): number {
+  private processPythonLine(line: string, lines: string[], index: number) {
+    // Variable assignments
+    if (
+      line.includes("=") &&
+      !line.includes("==") &&
+      !line.includes("!=") &&
+      !line.includes("<=") &&
+      !line.includes(">=")
+    ) {
+      const [varName, expression] = line.split("=").map((s) => s.trim())
+      const value = this.evaluateExpression(expression)
+
+      this.state.variables.set(varName, value)
+
+      this.addStep({
+        line: this.state.currentLine,
+        description: `Assign: ${varName} = ${this.formatValue(value)}`,
+        type: "variable_assignment",
+        variables: this.getVariablesArray(),
+        callStack: ["main"],
+        output: this.state.output.join("\n"),
+      })
+      return
+    }
+
+    // For loops
+    if (line.match(/for\s+\w+\s+in\s+/)) {
+      this.processPythonForLoop(line, lines, index)
+      return
+    }
+
+    // While loops
+    if (line.match(/while\s+.+:/)) {
+      this.processPythonWhileLoop(line, lines, index)
+      return
+    }
+
+    // If statements
+    if (line.match(/if\s+.+:/)) {
+      this.processPythonIfStatement(line, lines, index)
+      return
+    }
+
+    // Print statements
+    if (line.startsWith("print(")) {
+      const match = line.match(/print$$\s*([^)]+)\s*$$/)
+      if (match) {
+        const expression = match[1]
+        const value = this.evaluateExpression(expression)
+        const output = this.formatValue(value)
+
+        this.state.output.push(output)
+
+        this.addStep({
+          line: this.state.currentLine,
+          description: `Print: ${output}`,
+          type: "output",
+          variables: this.getVariablesArray(),
+          callStack: ["main"],
+          output: this.state.output.join("\n"),
+        })
+      }
+      return
+    }
+
+    // Other statements
+    this.addStep({
+      line: this.state.currentLine,
+      description: `Execute: ${line}`,
+      type: "function_call",
+      variables: this.getVariablesArray(),
+      callStack: ["main"],
+      output: this.state.output.join("\n"),
+    })
+  }
+
+  private processJavaScriptForLoop(line: string, lines: string[], startIndex: number) {
     const forMatch = line.match(/for\s*$$\s*(.+?)\s*;\s*(.+?)\s*;\s*(.+?)\s*$$/)
-    if (!forMatch) return startIndex
+    if (!forMatch) return
 
     const [, init, condition, increment] = forMatch
 
@@ -203,39 +285,49 @@ class CodeExecutionSimulator {
     if (init.includes("=")) {
       const initMatch = init.match(/(?:let|const|var)?\s*(\w+)\s*=\s*(.+)/)
       if (initMatch) {
-        const varName = initMatch[1]
-        const value = this.evaluateExpression(initMatch[2])
-        this.state.variables.set(varName, value)
+        const [, varName, value] = initMatch
+        const evalValue = this.evaluateExpression(value)
+        this.state.variables.set(varName, evalValue)
+
+        this.addStep({
+          line: this.state.currentLine,
+          description: `Initialize loop variable: ${varName} = ${evalValue}`,
+          type: "variable_assignment",
+          variables: this.getVariablesArray(),
+          callStack: ["main"],
+          output: this.state.output.join("\n"),
+        })
       }
     }
 
     this.addStep({
       line: this.state.currentLine,
-      description: `Start for loop: ${init}; ${condition}; ${increment}`,
+      description: `Start for loop`,
       type: "loop",
       variables: this.getVariablesArray(),
       callStack: ["main"],
       output: this.state.output.join("\n"),
     })
 
-    // Find loop body
-    const loopBody = this.extractBlockContent(lines, startIndex)
+    // Simulate loop iterations
     let iterations = 0
+    const MAX_ITERATIONS = 10
 
     while (iterations < MAX_ITERATIONS && this.evaluateCondition(condition)) {
       iterations++
 
       this.addStep({
         line: this.state.currentLine,
-        description: `Loop iteration ${iterations}`,
-        type: "loop_iteration",
+        description: `Loop iteration ${iterations}: condition ${condition} is true`,
+        type: "condition",
         variables: this.getVariablesArray(),
         callStack: ["main"],
         output: this.state.output.join("\n"),
       })
 
-      // Execute loop body
-      for (const bodyLine of loopBody) {
+      // Execute loop body (simplified)
+      const bodyLines = this.extractLoopBody(lines, startIndex)
+      for (const bodyLine of bodyLines) {
         if (bodyLine.trim()) {
           this.processJavaScriptLine(bodyLine.trim(), [bodyLine], 0)
         }
@@ -247,19 +339,17 @@ class CodeExecutionSimulator {
 
     this.addStep({
       line: this.state.currentLine,
-      description: `End for loop (${iterations} iterations)`,
-      type: "loop_end",
+      description: `End for loop after ${iterations} iterations`,
+      type: "loop",
       variables: this.getVariablesArray(),
       callStack: ["main"],
       output: this.state.output.join("\n"),
     })
-
-    return this.findBlockEnd(lines, startIndex)
   }
 
-  private processWhileLoop(line: string, lines: string[], startIndex: number): number {
+  private processJavaScriptWhileLoop(line: string, lines: string[], startIndex: number) {
     const whileMatch = line.match(/while\s*$$\s*(.+?)\s*$$/)
-    if (!whileMatch) return startIndex
+    if (!whileMatch) return
 
     const condition = whileMatch[1]
 
@@ -272,8 +362,8 @@ class CodeExecutionSimulator {
       output: this.state.output.join("\n"),
     })
 
-    const loopBody = this.extractBlockContent(lines, startIndex)
     let iterations = 0
+    const MAX_ITERATIONS = 10
 
     while (iterations < MAX_ITERATIONS && this.evaluateCondition(condition)) {
       iterations++
@@ -281,14 +371,15 @@ class CodeExecutionSimulator {
       this.addStep({
         line: this.state.currentLine,
         description: `While iteration ${iterations}: ${condition} is true`,
-        type: "loop_iteration",
+        type: "condition",
         variables: this.getVariablesArray(),
         callStack: ["main"],
         output: this.state.output.join("\n"),
       })
 
       // Execute loop body
-      for (const bodyLine of loopBody) {
+      const bodyLines = this.extractLoopBody(lines, startIndex)
+      for (const bodyLine of bodyLines) {
         if (bodyLine.trim()) {
           this.processJavaScriptLine(bodyLine.trim(), [bodyLine], 0)
         }
@@ -298,25 +389,23 @@ class CodeExecutionSimulator {
     this.addStep({
       line: this.state.currentLine,
       description: `End while loop: ${condition} is false`,
-      type: "loop_end",
+      type: "loop",
       variables: this.getVariablesArray(),
       callStack: ["main"],
       output: this.state.output.join("\n"),
     })
-
-    return this.findBlockEnd(lines, startIndex)
   }
 
-  private processIfStatement(line: string, lines: string[], startIndex: number): number {
+  private processJavaScriptIfStatement(line: string, lines: string[], startIndex: number) {
     const ifMatch = line.match(/if\s*$$\s*(.+?)\s*$$/)
-    if (!ifMatch) return startIndex
+    if (!ifMatch) return
 
     const condition = ifMatch[1]
     const conditionResult = this.evaluateCondition(condition)
 
     this.addStep({
       line: this.state.currentLine,
-      description: `If condition: ${condition} is ${conditionResult}`,
+      description: `Evaluate condition: ${condition} → ${conditionResult}`,
       type: "condition",
       variables: this.getVariablesArray(),
       callStack: ["main"],
@@ -324,18 +413,179 @@ class CodeExecutionSimulator {
     })
 
     if (conditionResult) {
-      const ifBody = this.extractBlockContent(lines, startIndex)
-      for (const bodyLine of ifBody) {
+      this.addStep({
+        line: this.state.currentLine,
+        description: `Condition is true, executing if block`,
+        type: "condition",
+        variables: this.getVariablesArray(),
+        callStack: ["main"],
+        output: this.state.output.join("\n"),
+      })
+
+      // Execute if body
+      const bodyLines = this.extractLoopBody(lines, startIndex)
+      for (const bodyLine of bodyLines) {
         if (bodyLine.trim()) {
           this.processJavaScriptLine(bodyLine.trim(), [bodyLine], 0)
         }
       }
+    } else {
+      this.addStep({
+        line: this.state.currentLine,
+        description: `Condition is false, skipping if block`,
+        type: "condition",
+        variables: this.getVariablesArray(),
+        callStack: ["main"],
+        output: this.state.output.join("\n"),
+      })
     }
-
-    return this.findBlockEnd(lines, startIndex)
   }
 
-  private extractBlockContent(lines: string[], startIndex: number): string[] {
+  private processPythonForLoop(line: string, lines: string[], startIndex: number) {
+    const forMatch = line.match(/for\s+(\w+)\s+in\s+(.+):/)
+    if (!forMatch) return
+
+    const [, varName, iterableExpr] = forMatch
+    const iterable = this.evaluateExpression(iterableExpr)
+
+    this.addStep({
+      line: this.state.currentLine,
+      description: `Start for loop: ${varName} in ${iterableExpr}`,
+      type: "loop",
+      variables: this.getVariablesArray(),
+      callStack: ["main"],
+      output: this.state.output.join("\n"),
+    })
+
+    if (Array.isArray(iterable)) {
+      for (let i = 0; i < Math.min(iterable.length, 10); i++) {
+        const item = iterable[i]
+        this.state.variables.set(varName, item)
+
+        this.addStep({
+          line: this.state.currentLine,
+          description: `Loop iteration ${i + 1}: ${varName} = ${this.formatValue(item)}`,
+          type: "variable_assignment",
+          variables: this.getVariablesArray(),
+          callStack: ["main"],
+          output: this.state.output.join("\n"),
+        })
+
+        // Execute loop body
+        const bodyLines = this.extractPythonBlock(lines, startIndex)
+        for (const bodyLine of bodyLines) {
+          if (bodyLine.trim()) {
+            this.processPythonLine(bodyLine.trim(), [bodyLine], 0)
+          }
+        }
+      }
+    }
+
+    this.addStep({
+      line: this.state.currentLine,
+      description: `End for loop`,
+      type: "loop",
+      variables: this.getVariablesArray(),
+      callStack: ["main"],
+      output: this.state.output.join("\n"),
+    })
+  }
+
+  private processPythonWhileLoop(line: string, lines: string[], startIndex: number) {
+    const whileMatch = line.match(/while\s+(.+):/)
+    if (!whileMatch) return
+
+    const condition = whileMatch[1]
+
+    this.addStep({
+      line: this.state.currentLine,
+      description: `Start while loop: ${condition}`,
+      type: "loop",
+      variables: this.getVariablesArray(),
+      callStack: ["main"],
+      output: this.state.output.join("\n"),
+    })
+
+    let iterations = 0
+    const MAX_ITERATIONS = 10
+
+    while (iterations < MAX_ITERATIONS && this.evaluateCondition(condition)) {
+      iterations++
+
+      this.addStep({
+        line: this.state.currentLine,
+        description: `While iteration ${iterations}: ${condition} is true`,
+        type: "condition",
+        variables: this.getVariablesArray(),
+        callStack: ["main"],
+        output: this.state.output.join("\n"),
+      })
+
+      // Execute loop body
+      const bodyLines = this.extractPythonBlock(lines, startIndex)
+      for (const bodyLine of bodyLines) {
+        if (bodyLine.trim()) {
+          this.processPythonLine(bodyLine.trim(), [bodyLine], 0)
+        }
+      }
+    }
+
+    this.addStep({
+      line: this.state.currentLine,
+      description: `End while loop: ${condition} is false`,
+      type: "loop",
+      variables: this.getVariablesArray(),
+      callStack: ["main"],
+      output: this.state.output.join("\n"),
+    })
+  }
+
+  private processPythonIfStatement(line: string, lines: string[], startIndex: number) {
+    const ifMatch = line.match(/if\s+(.+):/)
+    if (!ifMatch) return
+
+    const condition = ifMatch[1]
+    const conditionResult = this.evaluateCondition(condition)
+
+    this.addStep({
+      line: this.state.currentLine,
+      description: `Evaluate condition: ${condition} → ${conditionResult}`,
+      type: "condition",
+      variables: this.getVariablesArray(),
+      callStack: ["main"],
+      output: this.state.output.join("\n"),
+    })
+
+    if (conditionResult) {
+      this.addStep({
+        line: this.state.currentLine,
+        description: `Condition is true, executing if block`,
+        type: "condition",
+        variables: this.getVariablesArray(),
+        callStack: ["main"],
+        output: this.state.output.join("\n"),
+      })
+
+      // Execute if body
+      const bodyLines = this.extractPythonBlock(lines, startIndex)
+      for (const bodyLine of bodyLines) {
+        if (bodyLine.trim()) {
+          this.processPythonLine(bodyLine.trim(), [bodyLine], 0)
+        }
+      }
+    } else {
+      this.addStep({
+        line: this.state.currentLine,
+        description: `Condition is false, skipping if block`,
+        type: "condition",
+        variables: this.getVariablesArray(),
+        callStack: ["main"],
+        output: this.state.output.join("\n"),
+      })
+    }
+  }
+
+  private extractLoopBody(lines: string[], startIndex: number): string[] {
     const body: string[] = []
     let braceCount = 0
     let foundOpenBrace = false
@@ -370,51 +620,93 @@ class CodeExecutionSimulator {
     return body
   }
 
-  private findBlockEnd(lines: string[], startIndex: number): number {
-    let braceCount = 0
-    let foundOpenBrace = false
+  private extractPythonBlock(lines: string[], startIndex: number): string[] {
+    const body: string[] = []
+    const baseIndent = this.getIndentation(lines[startIndex])
 
-    for (let i = startIndex; i < lines.length; i++) {
+    for (let i = startIndex + 1; i < lines.length; i++) {
       const line = lines[i]
+      const indent = this.getIndentation(line)
 
-      if (line.includes("{")) {
-        foundOpenBrace = true
-        braceCount += (line.match(/\{/g) || []).length
-      }
+      if (line.trim() === "") continue
 
-      if (line.includes("}")) {
-        braceCount -= (line.match(/\}/g) || []).length
-      }
-
-      if (foundOpenBrace && braceCount === 0) {
-        return i
+      if (indent > baseIndent) {
+        body.push(line)
+      } else {
+        break
       }
     }
 
-    return startIndex
+    return body
+  }
+
+  private getIndentation(line: string): number {
+    return line.length - line.trimStart().length
   }
 
   private evaluateExpression(expr: string): any {
     try {
-      // Replace variables with their values
-      let evaluatedExpr = expr
-      for (const [varName, value] of this.state.variables) {
-        const regex = new RegExp(`\\b${varName}\\b`, "g")
-        evaluatedExpr = evaluatedExpr.replace(regex, String(value))
+      expr = expr.trim()
+
+      // Handle string literals
+      if ((expr.startsWith('"') && expr.endsWith('"')) || (expr.startsWith("'") && expr.endsWith("'"))) {
+        return expr.slice(1, -1)
       }
 
-      // Handle simple arithmetic and string literals
-      if (evaluatedExpr.match(/^[\d\s+\-*/().]+$/)) {
-        return eval(evaluatedExpr)
-      } else if (evaluatedExpr.startsWith('"') && evaluatedExpr.endsWith('"')) {
-        return evaluatedExpr.slice(1, -1)
-      } else if (evaluatedExpr.startsWith("'") && evaluatedExpr.endsWith("'")) {
-        return evaluatedExpr.slice(1, -1)
-      } else if (!isNaN(Number(evaluatedExpr))) {
-        return Number(evaluatedExpr)
+      // Handle numbers
+      if (/^\d+$/.test(expr)) return Number.parseInt(expr)
+      if (/^\d+\.\d+$/.test(expr)) return Number.parseFloat(expr)
+
+      // Handle boolean literals
+      if (expr === "true" || expr === "True") return true
+      if (expr === "false" || expr === "False") return false
+
+      // Handle variables
+      if (this.state.variables.has(expr)) {
+        return this.state.variables.get(expr)
       }
 
-      return evaluatedExpr
+      // Handle range function (Python)
+      if (expr.startsWith("range(")) {
+        const argsStr = expr.slice(6, -1)
+        const args = argsStr.split(",").map((arg) => this.evaluateExpression(arg.trim()))
+
+        if (args.length === 1) {
+          return Array.from({ length: args[0] }, (_, i) => i)
+        } else if (args.length === 2) {
+          return Array.from({ length: args[1] - args[0] }, (_, i) => i + args[0])
+        }
+        return []
+      }
+
+      // Handle simple arithmetic
+      const arithMatch = expr.match(/(\w+|\d+)\s*([+\-*/])\s*(\w+|\d+)/)
+      if (arithMatch) {
+        const [, left, op, right] = arithMatch
+        const leftVal = this.state.variables.has(left)
+          ? this.state.variables.get(left)
+          : isNaN(Number(left))
+            ? 0
+            : Number(left)
+        const rightVal = this.state.variables.has(right)
+          ? this.state.variables.get(right)
+          : isNaN(Number(right))
+            ? 0
+            : Number(right)
+
+        switch (op) {
+          case "+":
+            return leftVal + rightVal
+          case "-":
+            return leftVal - rightVal
+          case "*":
+            return leftVal * rightVal
+          case "/":
+            return leftVal / rightVal
+        }
+      }
+
+      return expr
     } catch {
       return expr
     }
@@ -422,10 +714,34 @@ class CodeExecutionSimulator {
 
   private evaluateCondition(condition: string): boolean {
     try {
+      // Replace variables with their values
       let evaluatedCondition = condition
       for (const [varName, value] of this.state.variables) {
         const regex = new RegExp(`\\b${varName}\\b`, "g")
         evaluatedCondition = evaluatedCondition.replace(regex, String(value))
+      }
+
+      // Handle comparison operators
+      const compMatch = evaluatedCondition.match(/(.+?)\s*([<>=!]+)\s*(.+)/)
+      if (compMatch) {
+        const [, left, op, right] = compMatch
+        const leftVal = isNaN(Number(left)) ? left : Number(left)
+        const rightVal = isNaN(Number(right)) ? right : Number(right)
+
+        switch (op) {
+          case "<":
+            return leftVal < rightVal
+          case "<=":
+            return leftVal <= rightVal
+          case ">":
+            return leftVal > rightVal
+          case ">=":
+            return leftVal >= rightVal
+          case "==":
+            return leftVal == rightVal
+          case "!=":
+            return leftVal != rightVal
+        }
       }
 
       return Boolean(eval(evaluatedCondition))
@@ -465,12 +781,19 @@ class CodeExecutionSimulator {
       this.addStep({
         line: i + 1,
         description: `Execute: ${line}`,
-        type: "statement",
+        type: "function_call",
         variables: [],
         callStack: ["main"],
         output: "",
       })
     }
+  }
+
+  private formatValue(value: any): string {
+    if (typeof value === "string") {
+      return `"${value}"`
+    }
+    return String(value)
   }
 
   private addStep(stepData: Omit<ExecutionStep, "id" | "timestamp">) {
@@ -557,7 +880,8 @@ export function useCodeExecution(code: string) {
     setError("")
     setOutput("")
 
-    const steps: ExecutionStep[] = simulateExecution(code, language)
+    const simulator = new AdvancedCodeExecutionSimulator(language)
+    const steps = simulator.simulate(code)
     setExecutionSteps(steps)
 
     if (steps.length > 0) {
@@ -565,444 +889,6 @@ export function useCodeExecution(code: string) {
       setVariables(steps[0]?.variables || [])
       setCallStack(steps[0]?.callStack || [])
     }
-  }
-
-  const simulateExecution = (code: string, language: string): ExecutionStep[] => {
-    const steps: ExecutionStep[] = []
-    let stepId = 1
-    let timestamp = 0
-    const variables: { [key: string]: any } = {}
-    const MAX_ITERATIONS = 8
-
-    // Add program start
-    steps.push({
-      id: `step-${stepId++}`,
-      line: 1,
-      variables: [],
-      callStack: ["main"],
-      output: "",
-      timestamp: (timestamp += 100),
-      description: "Program execution begins",
-      type: "function_call",
-    })
-
-    if (language === "javascript") {
-      const lines = code.split("\n")
-      let i = 0
-
-      while (i < lines.length) {
-        const line = lines[i].trim()
-        const lineNumber = i + 1
-
-        if (!line || line.startsWith("//")) {
-          i++
-          continue
-        }
-
-        // Variable declarations
-        if (line.includes("let ") || line.includes("const ") || line.includes("var ")) {
-          const varMatch = line.match(/(let|const|var)\s+(\w+)\s*=\s*(.+)/)
-          if (varMatch) {
-            const [, , varName, valueStr] = varMatch
-            const value = evaluateExpression(valueStr.replace(";", "").trim(), variables)
-            variables[varName] = value
-
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: [{ name: varName, value, type: typeof value }],
-              callStack: ["main"],
-              output: "",
-              timestamp: (timestamp += 100),
-              description: `Declare ${varName} = ${value}`,
-              type: "variable_assignment",
-            })
-          }
-        }
-
-        // Variable assignments
-        else if (
-          line.includes("=") &&
-          !line.includes("==") &&
-          !line.includes("!=") &&
-          !line.includes("<=") &&
-          !line.includes(">=") &&
-          !line.includes("let") &&
-          !line.includes("const") &&
-          !line.includes("var")
-        ) {
-          const assignMatch = line.match(/(\w+)\s*=\s*(.+)/)
-          if (assignMatch) {
-            const [, varName, valueStr] = assignMatch
-            const value = evaluateExpression(valueStr.replace(";", "").trim(), variables)
-            variables[varName] = value
-
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: [{ name: varName, value, type: typeof value }],
-              callStack: ["main"],
-              output: "",
-              timestamp: (timestamp += 100),
-              description: `Assign ${varName} = ${value}`,
-              type: "variable_assignment",
-            })
-          }
-        }
-
-        // For loops
-        else if (line.includes("for ") && line.includes("(")) {
-          const forMatch = line.match(
-            /for\s*$$\s*(?:let|var|const)?\s*(\w+)\s*=\s*(\d+)\s*;\s*\w+\s*([<>]=?)\s*(\d+)\s*;\s*\w+(\+\+|--|\+=\s*\d+)\s*$$/,
-          )
-          if (forMatch) {
-            const [, varName, startStr, operator, endStr] = forMatch
-            const start = Number.parseInt(startStr)
-            const end = Number.parseInt(endStr)
-
-            // Determine iteration count and direction
-            const iterations = []
-            if (operator.includes("<")) {
-              for (let val = start; val < end && iterations.length < MAX_ITERATIONS; val++) {
-                iterations.push(val)
-              }
-            } else if (operator.includes(">")) {
-              for (let val = start; val > end && iterations.length < MAX_ITERATIONS; val--) {
-                iterations.push(val)
-              }
-            }
-
-            // Loop start
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: Object.entries(variables).map(([name, value]) => ({ name, value, type: typeof value })),
-              callStack: ["main"],
-              output: "",
-              timestamp: (timestamp += 100),
-              description: `Start for loop: ${varName} from ${start} to ${end}`,
-              type: "loop",
-            })
-
-            // Execute each iteration
-            for (let iterIndex = 0; iterIndex < iterations.length; iterIndex++) {
-              const currentValue = iterations[iterIndex]
-              variables[varName] = currentValue
-
-              // Loop condition check
-              steps.push({
-                id: `step-${stepId++}`,
-                line: lineNumber,
-                variables: [{ name: varName, value: currentValue, type: "number" }],
-                callStack: ["main"],
-                output: "",
-                timestamp: (timestamp += 50),
-                description: `Loop iteration ${iterIndex + 1}: ${varName} = ${currentValue}`,
-                type: "condition",
-              })
-
-              // Execute loop body
-              let bodyLineIndex = i + 1
-              while (bodyLineIndex < lines.length) {
-                const bodyLine = lines[bodyLineIndex].trim()
-                const bodyLineNumber = bodyLineIndex + 1
-
-                if (!bodyLine) {
-                  bodyLineIndex++
-                  continue
-                }
-
-                // Check for loop end (closing brace)
-                if (bodyLine === "}") {
-                  break
-                }
-
-                // Handle console.log in loop body
-                if (bodyLine.includes("console.log")) {
-                  const logMatch = bodyLine.match(/console\.log\s*$$\s*([^)]+)\s*$$/)
-                  if (logMatch) {
-                    const logValue = evaluateExpression(logMatch[1], variables)
-
-                    steps.push({
-                      id: `step-${stepId++}`,
-                      line: bodyLineNumber,
-                      variables: Object.entries(variables).map(([name, value]) => ({
-                        name,
-                        value,
-                        type: typeof value,
-                      })),
-                      callStack: ["main"],
-                      output: `Output: ${logValue}`,
-                      timestamp: (timestamp += 50),
-                      description: `Print: ${logValue}`,
-                      type: "output",
-                    })
-                  }
-                }
-
-                // Handle variable assignments in loop body
-                else if (bodyLine.includes("=") && !bodyLine.includes("==")) {
-                  const assignMatch = bodyLine.match(/(\w+)\s*([+\-*/]?=)\s*(.+)/)
-                  if (assignMatch) {
-                    const [, varName, operator, valueStr] = assignMatch
-                    const value = evaluateExpression(valueStr.replace(";", "").trim(), variables)
-
-                    if (operator === "+=") {
-                      variables[varName] = (variables[varName] || 0) + value
-                    } else if (operator === "-=") {
-                      variables[varName] = (variables[varName] || 0) - value
-                    } else if (operator === "*=") {
-                      variables[varName] = (variables[varName] || 0) * value
-                    } else if (operator === "/=") {
-                      variables[varName] = (variables[varName] || 0) / value
-                    } else {
-                      variables[varName] = value
-                    }
-
-                    steps.push({
-                      id: `step-${stepId++}`,
-                      line: bodyLineNumber,
-                      variables: [{ name: varName, value: variables[varName], type: typeof variables[varName] }],
-                      callStack: ["main"],
-                      output: "",
-                      timestamp: (timestamp += 50),
-                      description: `${varName} ${operator} ${value} → ${variables[varName]}`,
-                      type: "variable_assignment",
-                    })
-                  }
-                }
-
-                bodyLineIndex++
-              }
-            }
-
-            // Loop end
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: Object.entries(variables).map(([name, value]) => ({ name, value, type: typeof value })),
-              callStack: ["main"],
-              output: "",
-              timestamp: (timestamp += 100),
-              description: `End for loop`,
-              type: "loop",
-            })
-
-            // Skip to after the loop body
-            let braceCount = 0
-            let skipIndex = i + 1
-            while (skipIndex < lines.length) {
-              const skipLine = lines[skipIndex].trim()
-              if (skipLine.includes("{")) braceCount++
-              if (skipLine.includes("}")) {
-                braceCount--
-                if (braceCount <= 0) break
-              }
-              skipIndex++
-            }
-            i = skipIndex
-          }
-        }
-
-        // While loops
-        else if (line.includes("while ") && line.includes("(")) {
-          const whileMatch = line.match(/while\s*$$\s*(\w+)\s*([<>]=?|[!=]=?)\s*(\w+|\d+)\s*$$/)
-          if (whileMatch) {
-            const [, leftVar, operator, rightVal] = whileMatch
-
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: Object.entries(variables).map(([name, value]) => ({ name, value, type: typeof value })),
-              callStack: ["main"],
-              output: "",
-              timestamp: (timestamp += 100),
-              description: `Start while loop: ${leftVar} ${operator} ${rightVal}`,
-              type: "loop",
-            })
-
-            let iterations = 0
-            while (iterations < MAX_ITERATIONS) {
-              const leftValue = variables[leftVar] || 0
-              const rightValue = isNaN(Number(rightVal)) ? variables[rightVal] || 0 : Number(rightVal)
-
-              let conditionResult = false
-              switch (operator) {
-                case "<":
-                  conditionResult = leftValue < rightValue
-                  break
-                case "<=":
-                  conditionResult = leftValue <= rightValue
-                  break
-                case ">":
-                  conditionResult = leftValue > rightValue
-                  break
-                case ">=":
-                  conditionResult = leftValue >= rightValue
-                  break
-                case "==":
-                  conditionResult = leftValue == rightValue
-                  break
-                case "!=":
-                  conditionResult = leftValue != rightValue
-                  break
-              }
-
-              if (!conditionResult) break
-
-              steps.push({
-                id: `step-${stepId++}`,
-                line: lineNumber,
-                variables: [{ name: leftVar, value: leftValue, type: typeof leftValue }],
-                callStack: ["main"],
-                output: "",
-                timestamp: (timestamp += 50),
-                description: `While condition true: ${leftVar} = ${leftValue}`,
-                type: "condition",
-              })
-
-              // Execute loop body (simplified - just increment)
-              variables[leftVar] = leftValue + 1
-              iterations++
-
-              steps.push({
-                id: `step-${stepId++}`,
-                line: lineNumber + 1,
-                variables: [{ name: leftVar, value: variables[leftVar], type: typeof variables[leftVar] }],
-                callStack: ["main"],
-                output: "",
-                timestamp: (timestamp += 50),
-                description: `Increment ${leftVar} to ${variables[leftVar]}`,
-                type: "variable_assignment",
-              })
-            }
-
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: Object.entries(variables).map(([name, value]) => ({ name, value, type: typeof value })),
-              callStack: ["main"],
-              output: "",
-              timestamp: (timestamp += 100),
-              description: `End while loop`,
-              type: "loop",
-            })
-          }
-        }
-
-        // If statements
-        else if (line.includes("if ") && line.includes("(")) {
-          const condMatch = line.match(/if\s*$$\s*([^)]+)\s*$$/)
-          if (condMatch) {
-            const condition = condMatch[1]
-            const result = evaluateCondition(condition, variables)
-
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: Object.entries(variables).map(([name, value]) => ({ name, value, type: typeof value })),
-              callStack: ["main"],
-              output: "",
-              timestamp: (timestamp += 100),
-              description: `Evaluate condition: ${condition} → ${result}`,
-              type: "condition",
-            })
-          }
-        }
-
-        // Console.log
-        else if (line.includes("console.log")) {
-          const logMatch = line.match(/console\.log\s*$$\s*([^)]+)\s*$$/)
-          if (logMatch) {
-            const logValue = evaluateExpression(logMatch[1], variables)
-
-            steps.push({
-              id: `step-${stepId++}`,
-              line: lineNumber,
-              variables: Object.entries(variables).map(([name, value]) => ({ name, value, type: typeof value })),
-              callStack: ["main"],
-              output: `Output: ${logValue}`,
-              timestamp: (timestamp += 100),
-              description: `Print: ${logValue}`,
-              type: "output",
-            })
-          }
-        }
-
-        i++
-      }
-    }
-
-    // Add program end
-    steps.push({
-      id: `step-${stepId++}`,
-      line: code.split("\n").length,
-      variables: Object.entries(variables).map(([name, value]) => ({ name, value, type: typeof value })),
-      callStack: [],
-      output: "",
-      timestamp: timestamp + 100,
-      description: "Program execution completed",
-      type: "return",
-    })
-
-    return steps
-  }
-
-  const evaluateExpression = (expr: string, variables: { [key: string]: any }): any => {
-    expr = expr.trim().replace(/['"]/g, "")
-
-    // Handle numbers
-    if (/^\d+$/.test(expr)) return Number.parseInt(expr)
-    if (/^\d+\.\d+$/.test(expr)) return Number.parseFloat(expr)
-
-    // Handle variables
-    if (variables[expr] !== undefined) return variables[expr]
-
-    // Handle simple arithmetic
-    const arithMatch = expr.match(/(\w+|\d+)\s*([+\-*/])\s*(\w+|\d+)/)
-    if (arithMatch) {
-      const [, left, op, right] = arithMatch
-      const leftVal = variables[left] !== undefined ? variables[left] : isNaN(Number(left)) ? 0 : Number(left)
-      const rightVal = variables[right] !== undefined ? variables[right] : isNaN(Number(right)) ? 0 : Number(right)
-
-      switch (op) {
-        case "+":
-          return leftVal + rightVal
-        case "-":
-          return leftVal - rightVal
-        case "*":
-          return leftVal * rightVal
-        case "/":
-          return leftVal / rightVal
-      }
-    }
-
-    return expr
-  }
-
-  const evaluateCondition = (condition: string, variables: { [key: string]: any }): boolean => {
-    const condMatch = condition.match(/(\w+|\d+)\s*([<>=!]+)\s*(\w+|\d+)/)
-    if (condMatch) {
-      const [, left, op, right] = condMatch
-      const leftVal = variables[left] !== undefined ? variables[left] : isNaN(Number(left)) ? 0 : Number(left)
-      const rightVal = variables[right] !== undefined ? variables[right] : isNaN(Number(right)) ? 0 : Number(right)
-
-      switch (op) {
-        case "<":
-          return leftVal < rightVal
-        case "<=":
-          return leftVal <= rightVal
-        case ">":
-          return leftVal > rightVal
-        case ">=":
-          return leftVal >= rightVal
-        case "==":
-          return leftVal == rightVal
-        case "!=":
-          return leftVal != rightVal
-      }
-    }
-    return false
   }
 
   const stepForward = () => {
