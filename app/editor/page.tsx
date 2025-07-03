@@ -12,6 +12,9 @@ import NewExplationModule from "@/components/NewExplationModule"
 import { useCodeExecution } from "@/hooks/use-code-execution"
 import { generateFlowchart } from "@/components/flowchart"
 import { FlowchartView } from "@/components/FlowchartView"
+import AlternativeVisualizer from "@/components/AlternativeVisualizer"
+import { useEnhancedExecution } from "@/hooks/useEnhancedExecution"
+
 
 import Link from "next/link"
 
@@ -58,6 +61,11 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
     reset,
     setExecutionSpeed,
   } = useCodeExecution(code)
+
+
+  
+
+
 
   const toggleBreakpoint = (lineNumber: number) => {
     setBreakpoints((prev) =>
@@ -173,6 +181,13 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
             code={code}
           />
         )}
+
+{executionSteps.length > 0 && (
+ <Card className="lg:col-span-1">
+      <AlternativeVisualizer steps={executionSteps} codeSnippet={code} />
+    </Card>
+)}
+        
 
 {isDebugging && flowchartData && (
   <Card>

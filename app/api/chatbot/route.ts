@@ -4,8 +4,9 @@ import { AzureKeyCredential } from "@azure/core-auth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const endpoint = "https://models.github.ai/inference";
-const model = "deepseek/DeepSeek-V3-0324";
-const client = ModelClient(endpoint, new AzureKeyCredential(process.env.DEEPSEEK_KEY!));
+// const model = "deepseek/DeepSeek-V3-0324";
+const model = "openai/gpt-4.1";
+const client = ModelClient(endpoint, new AzureKeyCredential(process.env.CHATGPT_KEY!));
 
 const gemini = new GoogleGenerativeAI(process.env.GEMINI_KEY!);
 console.log("GEMINI_API_KEY Loaded:", process.env.GEMINI_KEY);

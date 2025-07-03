@@ -1,14 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Clock } from "lucide-react"
-import MonacoEditor from "./components/monaco-editor"
-import ExecutionTimeline from "./components/execution-timeline"
-import DebugControls from "./components/debug-controls"
-import VisualizationPanel from "./components/visualization-panel"
-import SampleCodeSelector from "./components/sample-code-selector"
-import { useCodeExecution } from "./hooks/use-code-execution"
+import MonacoEditor from "../components/monaco-editor"
+import ExecutionTimeline from "../components/execution-timeline"
+import DebugControls from "../components/debug-controls"
+import VisualizationPanel from "../components/visualization-panel"
+import SampleCodeSelector from "@/components/sample-code-selector"
+import { useCodeExecution } from "../hooks/use-code-execution"
+import VisualizerPanel from "../components/SimpleVisualizerPanel" // ✅ NEW
 import "./App.css"
 
 function App() {
@@ -30,6 +31,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
 
   const [language, setLanguage] = useState("javascript")
   const [breakpoints, setBreakpoints] = useState<number[]>([])
+  const [simpleLine, setSimpleLine] = useState(-1) // ✅ For new visualizer
 
   const {
     isRunning,
@@ -95,12 +97,6 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
         {/* Execution Timeline */}
         {isDebugging && executionSteps.length > 0 && (
           <Card>
-            {/* <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Execution Timeline
-              </CardTitle>
-            </CardHeader> */}
             <CardContent>
               <ExecutionTimeline steps={executionSteps} currentStep={currentStep} onStepClick={jumpToStep} />
             </CardContent>
@@ -163,13 +159,32 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
                 {executionSteps[currentStep] && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">Action:</span>
-                    <span className="text-sm text-muted-foreground">{executionSteps[currentStep].description}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {executionSteps[currentStep].description}
+                    </span>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* ✅ Beginner-Friendly Step-by-Step Visualizer */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Beginner-Friendly Step-by-Step Visualizer</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <MonacoEditor
+              value={code}
+              onChange={setCode}
+              language={language}
+              currentLine={simpleLine}
+              disabled={false}
+            />
+            <VisualizerPanel code={code} onLineChange={setSimpleLine} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
