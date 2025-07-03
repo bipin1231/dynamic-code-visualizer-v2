@@ -11,6 +11,7 @@
   "dependencies": {
     "@azure-rest/ai-inference": "^1.0.0-beta.6",
     "@azure/core-auth": "^1.9.0",
+    "@babel/standalone": "^7.28.0",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.9.1",
     "@monaco-editor/react": "^4.7.0",
@@ -52,6 +53,7 @@
     "framer-motion": "^12.20.1",
     "input-otp": "1.4.1",
     "js-interpreter": "^6.0.1",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.454.0",
     "monaco-editor": "^0.52.0",
     "next": "15.2.4",
@@ -82,6 +84,7 @@
     "@rollup/plugin-babel": "^6.0.4",
     "@types/esprima": "^4.0.6",
     "@types/estree": "^1.0.8",
+    "@types/lodash": "^4.17.20",
     "@types/node": "^22.15.32",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

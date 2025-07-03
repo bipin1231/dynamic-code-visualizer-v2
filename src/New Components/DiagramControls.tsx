@@ -1,74 +1,45 @@
-import { ChevronLeftIcon, PauseIcon, PlayIcon, ChevronRightIcon } from "lucide-react";
+import React from "react";
 
-interface DiagramControlsProps {
+interface Props {
   currentStep: number;
   totalSteps: number;
-  onPrev: () => void;
-  onNext: () => void;
+  isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
-  isPlaying: boolean;
-  onStepSelect: (step: number) => void; // Add this prop
+  onNext: () => void;
+  onPrev: () => void;
+  onSelectStep: (step: number) => void;
 }
 
 export default function DiagramControls({
   currentStep,
   totalSteps,
-  onPrev,
-  onNext,
+  isPlaying,
   onPlay,
   onPause,
-  isPlaying,
-  onStepSelect // Add this prop
-}: DiagramControlsProps) {
-  
+  onNext,
+  onPrev,
+  onSelectStep,
+}: Props) {
   return (
-    <div className="p-4 bg-gray-800 border-t border-gray-700">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onPrev}
-            disabled={currentStep === 0}
-            className="p-2 bg-gray-700 rounded-full disabled:opacity-50"
-          >
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
-          
-          <button
-            onClick={isPlaying ? onPause : onPlay}
-            className="p-2 bg-blue-600 rounded-full"
-          >
-            {isPlaying ? (
-              <PauseIcon className="w-5 h-5" />
-            ) : (
-              <PlayIcon className="w-5 h-5" />
-            )}
-          </button>
-          
-          <button
-            onClick={onNext}
-            disabled={currentStep === totalSteps - 1}
-            className="p-2 bg-gray-700 rounded-full disabled:opacity-50"
-          >
-            <ChevronRightIcon className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="text-sm">
-          Step {currentStep + 1} of {totalSteps}
-        </div>
-        
-        <div className="w-48">
-          <input
-            type="range"
-            min="0"
-            max={totalSteps - 1}
-            value={currentStep}
-            onChange={(e) => onStepSelect(Number(e.target.value))}
-            className="w-full"
-          />
-        </div>
+    <div className="bg-gray-800 p-2 flex justify-between items-center">
+      <div>
+        <button onClick={onPrev} disabled={currentStep === 0}>Prev</button>
+        <button onClick={isPlaying ? onPause : onPlay}>
+          {isPlaying ? "Pause" : "Play"}
+        </button>
+        <button onClick={onNext} disabled={currentStep === totalSteps - 1}>Next</button>
       </div>
+      <div>
+        Step {currentStep + 1} of {totalSteps}
+      </div>
+      <input
+        type="range"
+        min="0"
+        max={totalSteps - 1}
+        value={currentStep}
+        onChange={(e) => onSelectStep(Number(e.target.value))}
+      />
     </div>
   );
 }

@@ -3,23 +3,22 @@ export class LanguageExecutor {
     try {
       // Create context with proxy tracking
       const context = {
-        __variables__: {},  // Initialize as empty object
+        __variables__: {},
         emitStep: (window as any).emitStep
       };
 
       // Create proxy handler
       const handler = {
         get(target: any, prop: string) {
+          // Avoid proxying internal properties
+          if (prop === '__isProxy') return true;
           return target[prop];
         },
         set(target: any, prop: string, value: any) {
+          // Avoid infinite recursion on proxy properties
+          if (prop === '__isProxy') return true;
+          
           target[prop] = value;
-          // Emit variable update step
-          context.emitStep({
-            type: 'variable_update',
-            description: `${prop} = ${value}`,
-            line: 0 // Line number will be added by Babel plugin
-          });
           return true;
         }
       };
@@ -29,27 +28,31 @@ export class LanguageExecutor {
 
       // Create execution function
       const func = new Function('context', `
-        // Make context available
-        const { __variables__, emitStep } = context;
+        // Create safe reference to emitStep
+        const safeEmitStep = context.emitStep;
         
-        // Create global proxy for variable access
+        // Create safe global proxy
         const globalProxy = new Proxy({}, {
           get(_, prop) {
-            return __variables__[prop];
+            return context.__variables__[prop];
           },
           set(_, prop, value) {
-            __variables__[prop] = value;
+            context.__variables__[prop] = value;
             return true;
           }
         });
         
-        // Run code in proxy context
+        // Execute in a protected context
         (function(global) {
           with(global) {
             try {
               ${code}
+              safeEmitStep({
+                type: 'program_complete',
+                description: 'Program completed successfully'
+              });
             } catch(e) {
-              emitStep({
+              safeEmitStep({
                 type: 'error',
                 description: 'Error: ' + e.message
               });
@@ -65,7 +68,6 @@ export class LanguageExecutor {
       // Emit an error step
       (window as any).emitStep({
         type: 'error',
-        line: 0,
         description: `Error: ${e?.message || 'Unknown error'}`
       });
     }

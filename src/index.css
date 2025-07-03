@@ -57,3 +57,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+.current-line-highlight {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border-left: 3px solid #10b981;
+}
+
+.current-line-highlight {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border-left: 3px solid #10b981;
+}
+
+/* For diagram nodes */
+.react-flow__node {
+  transition: all 0.3s ease;
+}
+
+.react-flow__node:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
