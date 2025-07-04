@@ -6,7 +6,7 @@ import path from "path"
 export default defineConfig({
   plugins: [
     react(),
-   babel({
+    babel({
       babelHelpers: 'bundled',
       extensions: ['.js', '.ts', '.tsx'],
       include: ['src/**'],
@@ -16,7 +16,12 @@ export default defineConfig({
   server: { open: true },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "."),
+      "@components": path.resolve(__dirname, "components"),
+      "@lib": path.resolve(__dirname, "lib"),
+      "@hooks": path.resolve(__dirname, "hooks"),
+      "@types": path.resolve(__dirname, "types"),
+      "@data": path.resolve(__dirname, "data")
     },
   },
 })

@@ -1,6 +1,6 @@
 // pages/visualizer.tsx
 "use client";
-
+import { ReactFlowProvider } from "reactflow";
 import MonacoVisualizer from "../../src/New Components/MonacoVisualizer"
 import Link from "next/link";
 
@@ -16,7 +16,9 @@ export default function VisualizerPage() {
         </div>
       </header>
       <main className="max-w-7xl mx-auto p-4">
-       <MonacoVisualizer/>
+      <ReactFlowProvider>
+          <MonacoVisualizer />
+        </ReactFlowProvider>
       </main>
     </div>
   );

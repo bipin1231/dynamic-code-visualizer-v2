@@ -18,6 +18,27 @@
     "noEmit": true,
     "incremental": true,
     "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@components/*": [
+        "components/*"
+      ],
+      "@lib/*": [
+        "lib/*"
+      ],
+      "@hooks/*": [
+        "hooks/*"
+      ],
+      "@types/*": [
+        "types/*"
+      ],
+      "@data/*": [
+        "data/*"
+      ]
+    },
     "plugins": [
       {
         "name": "next"
@@ -25,8 +46,12 @@
     ]
   },
   "include": [
+    "components",
+    "data",
+    "hooks",
+    "lib",
     "src",
-    "src/custom.d.ts",
+    "types",
     ".next/types/**/*.ts"
   ],
   "exclude": [
