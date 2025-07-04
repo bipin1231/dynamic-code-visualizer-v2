@@ -1,198 +1,172 @@
-const template = require("@babel/template").default;
-const generate = require("@babel/generator").default;
-
 module.exports = function ({ types: t }) {
+  function createEmitStep(type, line, description) {
+    return t.expressionStatement(
+      t.callExpression(t.identifier("emitStep"), [
+        t.objectExpression([
+          t.objectProperty(t.identifier("type"), t.stringLiteral(type)),
+          t.objectProperty(t.identifier("line"), t.numericLiteral(line)),
+          t.objectProperty(t.identifier("description"), t.stringLiteral(description)),
+          t.objectProperty(
+            t.identifier("variables"),
+            t.memberExpression(t.identifier("window"), t.identifier("__variables__"))
+          ),
+        ]),
+      ])
+    );
+  }
+
   return {
     visitor: {
-      Program(path) {
-        if (path.node.__instrumented) return;
-        path.node.__instrumented = true;
-      },
-
       VariableDeclaration(path) {
-        const { node } = path;
-        const line = node.loc?.start.line || 0;
+        const line = path.node.loc?.start?.line || 0;
 
-        const steps = node.declarations.map((declarator) => {
-          const varName = declarator.id.name;
-          const init = declarator.init || t.identifier("undefined");
+        const declarations = path.node.declarations.map((decl) => {
+          const name = decl.id.name;
+          const value = decl.init || t.identifier("undefined");
 
-          return t.expressionStatement(
-            t.callExpression(t.identifier("emitStep"), [
-              t.objectExpression([
-                t.objectProperty(t.identifier("type"), t.stringLiteral("variable_declaration")),
-                t.objectProperty(
-                  t.identifier("description"),
-                  t.binaryExpression(
-                    "+",
-                    t.stringLiteral(`Declared variable '${varName}' with initial value: `),
-                    t.callExpression(
-                      t.memberExpression(t.identifier("JSON"), t.identifier("stringify")),
-                      [init]
-                    )
-                  )
-                ),
-                t.objectProperty(t.identifier("line"), t.numericLiteral(line)),
-                t.objectProperty(
-                  t.identifier("variables"),
-                  t.objectExpression([
-                    t.objectProperty(t.identifier(varName), init),
-                  ])
-                ),
-              ]),
-            ])
+          const assignExpr = t.expressionStatement(
+            t.assignmentExpression(
+              "=",
+              t.memberExpression(
+                t.memberExpression(t.identifier("window"), t.identifier("__variables__")),
+                t.identifier(name)
+              ),
+              value
+            )
           );
+
+          const emitStep = createEmitStep("variable_declaration", line, `Declare ${name}`);
+
+          return [assignExpr, emitStep];
         });
 
-        path.insertBefore(steps);
+        const flat = declarations.flat();
+        path.replaceWithMultiple(flat);
       },
 
       AssignmentExpression(path) {
-        const { node } = path;
-        const line = node.loc?.start.line || 0;
+        const line = path.node.loc?.start?.line || 0;
+        const left = path.node.left;
+        const right = path.node.right;
 
-        if (t.isIdentifier(node.left)) {
-          const varName = node.left.name;
-          const right = node.right;
-
-          const emit = t.expressionStatement(
-            t.callExpression(t.identifier("emitStep"), [
-              t.objectExpression([
-                t.objectProperty(t.identifier("type"), t.stringLiteral("variable_assignment")),
-                t.objectProperty(
-                  t.identifier("description"),
-                  t.binaryExpression(
-                    "+",
-                    t.stringLiteral(`Assigned ${varName} = `),
-                    t.callExpression(
-                      t.memberExpression(t.identifier("JSON"), t.identifier("stringify")),
-                      [right]
-                    )
-                  )
-                ),
-                t.objectProperty(t.identifier("line"), t.numericLiteral(line)),
-                t.objectProperty(
-                  t.identifier("variables"),
-                  t.objectExpression([
-                    t.objectProperty(t.identifier(varName), right),
-                  ])
-                ),
-              ]),
-            ])
+        if (t.isIdentifier(left)) {
+          const assignExpr = t.assignmentExpression(
+            "=",
+            t.memberExpression(
+              t.memberExpression(t.identifier("window"), t.identifier("__variables__")),
+              t.identifier(left.name)
+            ),
+            right
           );
 
-          path.insertBefore(emit);
+          const emitStep = createEmitStep("variable_assignment", line, `Assign ${left.name}`);
+
+          path.replaceWithMultiple([t.expressionStatement(assignExpr), emitStep]);
         }
       },
 
-      ExpressionStatement(path) {
-        const { node } = path;
-        const line = node.loc?.start.line || 0;
+UpdateExpression(path) {
+  const line = path.node.loc?.start?.line || 0;
+  const arg = path.node.argument;
 
-        if (
-          t.isCallExpression(node.expression) &&
-          t.isMemberExpression(node.expression.callee) &&
-          node.expression.callee.object.name === "console"
-        ) {
-          const arg = node.expression.arguments[0] || t.stringLiteral("undefined");
+  if (t.isIdentifier(arg)) {
+    const updateExpr = t.updateExpression(
+      path.node.operator,
+      t.memberExpression(
+        t.memberExpression(t.identifier("window"), t.identifier("__variables__")),
+        t.identifier(arg.name)
+      ),
+      path.node.prefix
+    );
 
-          const emit = t.expressionStatement(
-            t.callExpression(t.identifier("emitStep"), [
-              t.objectExpression([
-                t.objectProperty(t.identifier("type"), t.stringLiteral("log")),
-                t.objectProperty(t.identifier("description"), t.stringLiteral("console.log call")),
-                t.objectProperty(t.identifier("line"), t.numericLiteral(line)),
-                t.objectProperty(
-                  t.identifier("output"),
-                  t.callExpression(
-                    t.identifier("String"),
-                    [arg]
-                  )
-                ),
-              ]),
-            ])
-          );
+    const operator = path.node.operator;
+    const prefix = path.node.prefix;
+    const description = prefix
+      ? `${operator}${arg.name}`   // prefix form, e.g. ++z
+      : `${arg.name}${operator}`;  // postfix form, e.g. z++
 
-          path.insertBefore(emit);
-        }
+    const emitStep = createEmitStep(
+      "variable_assignment",
+      line,
+      description
+    );
+
+    path.replaceWithMultiple([t.expressionStatement(updateExpr), emitStep]);
+  }
+},
+
+
+      IfStatement(path) {
+        const line = path.node.loc?.start?.line || 0;
+
+        const emitStep = createEmitStep("condition", line, "If condition");
+
+        path.insertBefore(emitStep);
       },
 
       ForStatement(path) {
-        const { node } = path;
-        const line = node.loc?.start.line || 0;
+        const line = path.node.loc?.start?.line || 0;
 
-        const emitStart = template.statement(`
-          emitStep({
-            type: "loop_start",
-            description: "For loop start",
-            line: ${line}
+        const emitStep = createEmitStep("loop_start", line, "For loop start");
+
+        path.insertBefore(emitStep);
+
+        // Instrument the body statements to emit steps before each statement
+        const body = path.node.body;
+
+        if (t.isBlockStatement(body)) {
+          const newStatements = [];
+
+          body.body.forEach((stmt) => {
+            // Insert emitStep before the statement
+            const stmtLine = stmt.loc?.start?.line || line;
+
+            const emitStmt = createEmitStep(
+              "loop_body_statement",
+              stmtLine,
+              `Execute line ${stmtLine} inside loop`
+            );
+
+            newStatements.push(emitStmt);
+            newStatements.push(stmt);
           });
-        `);
 
-        const emitIter = template.statement(`
-          emitStep({
-            type: "loop_iteration",
-            description: "For loop iteration",
-            line: ${line}
-          });
-        `);
-
-        path.insertBefore(emitStart());
-
-        if (t.isBlockStatement(node.body)) {
-          node.body.body.unshift(emitIter());
+          // Replace loop body with new statements wrapped in a block
+          path.get("body").replaceWith(t.blockStatement(newStatements));
         } else {
-          const newBody = t.blockStatement([emitIter(), node.body]);
-          node.body = newBody;
+          // If single statement loop body (no block)
+          const stmtLine = body.loc?.start?.line || line;
+          const emitStmt = createEmitStep(
+            "loop_body_statement",
+            stmtLine,
+            `Execute line ${stmtLine} inside loop`
+          );
+
+          path.get("body").replaceWith(t.blockStatement([emitStmt, body]));
         }
       },
 
-      IfStatement(path) {
-        const { node } = path;
-        const line = node.loc?.start.line || 0;
-        const testCode = generate(node.test).code;
-
-        const emit = template.statement(`
-          emitStep({
-            type: "condition",
-            description: "If condition: ${testCode}",
-            line: ${line}
-          });
-        `);
-
-        path.insertBefore(emit());
-      },
-
       ReturnStatement(path) {
-        const { node } = path;
-        const line = node.loc?.start.line || 0;
-        const valueCode = node.argument ? generate(node.argument).code : "undefined";
+        const line = path.node.loc?.start?.line || 0;
 
-        const emit = template.statement(`
-          emitStep({
-            type: "return",
-            description: "Returning value: " + JSON.stringify(${valueCode}),
-            line: ${line}
-          });
-        `);
+        const emitStep = createEmitStep("return", line, "Return statement");
 
-        path.insertBefore(emit());
+        path.insertBefore(emitStep);
       },
 
-      FunctionDeclaration(path) {
-        const { node } = path;
-        const line = node.loc?.start.line || 0;
-        const name = node.id?.name || "anonymous";
+      CallExpression(path) {
+        // Instrument console.log calls to emit a step before
+        if (
+          t.isMemberExpression(path.node.callee) &&
+          path.node.callee.object.name === "console" &&
+          path.node.callee.property.name === "log"
+        ) {
+          const line = path.node.loc?.start?.line || 0;
 
-        const emit = template.statement(`
-          emitStep({
-            type: "function_call",
-            description: "Function declared: ${name}",
-            line: ${line}
-          });
-        `);
+          const emitStep = createEmitStep("log", line, "console.log call");
 
-        path.insertBefore(emit());
+          path.insertBefore(emitStep);
+        }
       },
     },
   };
