@@ -121,7 +121,7 @@ export default function ExecutionTimeline({ steps, currentStep, onStepClick }: E
         </div>
       </div>
 
-      <ScrollArea ref={scrollAreaRef} className="h-[500px] w-full border rounded-lg p-4">
+      <ScrollArea ref={scrollAreaRef} className="h-[450px] w-full border rounded-lg p-4">
         <div className="relative">
           <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-border"></div>
 

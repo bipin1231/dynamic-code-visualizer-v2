@@ -1,153 +1,118 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import type { editor } from "monaco-editor"
-import { Loader2 } from "lucide-react"
+import { useEffect, useRef } from "react"
+import * as monaco from "monaco-editor"
 
 interface MonacoEditorProps {
   value: string
   onChange: (value: string) => void
   language: string
+  theme?: string
+  height?: string
   currentLine?: number
-  breakpoints?: number[]
-  onBreakpointToggle?: (lineNumber: number) => void
-  disabled?: boolean
-}
-
-// Move mapLanguage above all hooks
-const mapLanguage = (lang: string): string => {
-  const languageMap: Record<string, string> = {
-    javascript: "javascript",
-    python: "python",
-    c: "c",
-    cpp: "cpp",
-    java: "java",
-  }
-  return languageMap[lang] || "plaintext"
+  readOnly?: boolean
 }
 
 export default function MonacoEditor({
   value,
   onChange,
   language,
+  theme = "vs-dark",
+  height = "400px",
   currentLine = -1,
-  breakpoints = [],
-  onBreakpointToggle,
-  disabled = false,
+  readOnly = false,
 }: MonacoEditorProps) {
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const monacoRef = useRef<typeof import("monaco-editor")>()
-  const editorRef = useRef<editor.IStandaloneCodeEditor>()
   const containerRef = useRef<HTMLDivElement>(null)
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+  const modelRef = useRef<monaco.editor.ITextModel | null>(null)
+  const isInternalChangeRef = useRef(false)
   const decorationsRef = useRef<string[]>([])
-  const breakpointDecorationIdsRef = useRef<string[]>([])
 
-  // Load Monaco editor
   useEffect(() => {
-    if (typeof window !== "undefined" && !isLoaded) {
-      setIsLoading(true)
-      import("monaco-editor").then((monaco) => {
-        monacoRef.current = monaco
-        setIsLoaded(true)
-        setIsLoading(false)
-      })
+    if (!containerRef.current) return
+
+    // Create model only once
+    if (!modelRef.current) {
+      modelRef.current = monaco.editor.createModel(value, language)
     }
-  }, [isLoaded])
 
-  // Initialize editor
-  useEffect(() => {
-    if (
-      isLoaded &&
-      containerRef.current &&
-      monacoRef.current &&
-      !editorRef.current
-    ) {
-      const monaco = monacoRef.current
-
-      // Define editor options
-      const options: editor.IStandaloneEditorConstructionOptions = {
-        value,
-        language: mapLanguage(language),
-        theme: "vs",
+    // Create editor only once
+    if (!editorRef.current) {
+      editorRef.current = monaco.editor.create(containerRef.current, {
+        model: modelRef.current,
+        theme,
         automaticLayout: true,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
+        fontSize: 14,
         lineNumbers: "on",
-        glyphMargin: true,
-        folding: true,
-        readOnly: disabled,
-      }
-
-      // Create editor
-      const editor = monaco.editor.create(containerRef.current, options)
-      editorRef.current = editor
-
-      // Handle changes
-      editor.onDidChangeModelContent(() => {
-        const value = editor.getValue()
-        onChange(value)
+        readOnly,
+        wordWrap: "on",
       })
 
-      // Handle breakpoint clicks
-      editor.onMouseDown((e) => {
-        if (
-          e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN &&
-          onBreakpointToggle
-        ) {
-          const lineNumber = e.target.position?.lineNumber
-          if (lineNumber) {
-            onBreakpointToggle(lineNumber)
-          }
+      // Set up change listener
+      editorRef.current.onDidChangeModelContent(() => {
+        if (!isInternalChangeRef.current && editorRef.current && modelRef.current) {
+          const newValue = modelRef.current.getValue()
+          onChange(newValue)
         }
       })
+    }
 
-      return () => {
-        editor.dispose()
-        editorRef.current = undefined
+    return () => {
+      // Cleanup on unmount
+      if (editorRef.current) {
+        editorRef.current.dispose()
+        editorRef.current = null
+      }
+      if (modelRef.current) {
+        modelRef.current.dispose()
+        modelRef.current = null
       }
     }
-  }, [isLoaded, value, language, onChange, disabled, onBreakpointToggle])
+  }, [])
 
-  // Update editor value when prop changes
+  // Update value when prop changes
   useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      const editor = editorRef.current
-      const currentValue = editor.getValue()
-
-      if (value !== currentValue) {
-        editor.setValue(value)
+    if (modelRef.current && editorRef.current) {
+      const currentValue = modelRef.current.getValue()
+      if (currentValue !== value) {
+        isInternalChangeRef.current = true
+        modelRef.current.setValue(value)
+        isInternalChangeRef.current = false
       }
     }
   }, [value])
 
-  // Update editor language when prop changes
+  // Update language when prop changes
   useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      const monaco = monacoRef.current
-      const model = editorRef.current.getModel()
-
-      if (model) {
-        monaco.editor.setModelLanguage(model, mapLanguage(language))
-      }
+    if (modelRef.current) {
+      monaco.editor.setModelLanguage(modelRef.current, language)
     }
   }, [language])
 
-  // Update current line highlight
+  // Update theme when prop changes
   useEffect(() => {
-    if (
-      editorRef.current &&
-      monacoRef.current &&
-      currentLine > 0
-    ) {
-      const monaco = monacoRef.current
-      const editor = editorRef.current
+    if (editorRef.current) {
+      monaco.editor.setTheme(theme)
+    }
+  }, [theme])
 
-      // Remove previous decorations
-      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [])
+  // Update read-only state
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions({ readOnly })
+    }
+  }, [readOnly])
+
+  // Highlight current line
+  useEffect(() => {
+    if (editorRef.current && currentLine > 0) {
+      // Clear previous decorations
+      decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, [])
 
       // Add new decoration for current line
-      decorationsRef.current = editor.deltaDecorations(
+      decorationsRef.current = editorRef.current.deltaDecorations(
         [],
         [
           {
@@ -155,69 +120,32 @@ export default function MonacoEditor({
             options: {
               isWholeLine: true,
               className: "current-line-highlight",
-              linesDecorationsClassName: "current-line-glyph",
+              glyphMarginClassName: "current-line-glyph",
             },
           },
         ],
       )
 
-      // Scroll to the line if it's not visible
-      editor.revealLineInCenter(currentLine)
+      // Scroll to current line
+      editorRef.current.revealLineInCenter(currentLine)
+    } else if (editorRef.current && currentLine === -1) {
+      // Clear decorations when no line is highlighted
+      decorationsRef.current = editorRef.current.deltaDecorations(decorationsRef.current, [])
     }
   }, [currentLine])
 
-  // Update breakpoints
-  useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      const monaco = monacoRef.current
-      const editor = editorRef.current
-
-      // Remove previous breakpoint decorations
-      breakpointDecorationIdsRef.current = editor.deltaDecorations(
-        breakpointDecorationIdsRef.current,
-        []
-      )
-
-      // Add new breakpoint decorations
-      const breakpointDecorations = breakpoints.map((lineNumber) => ({
-        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-        options: {
-          isWholeLine: false,
-          glyphMarginClassName: "breakpoint-glyph",
-        },
-      }))
-
-      breakpointDecorationIdsRef.current = editor.deltaDecorations(
-        [],
-        breakpointDecorations
-      )
-    }
-  }, [breakpoints])
-
   return (
-    <div className="w-full h-96 border rounded-md overflow-hidden relative">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
+    <div className="relative">
+      <div ref={containerRef} style={{ height }} />
       <style jsx global>{`
         .current-line-highlight {
-          background-color: rgba(255, 215, 0, 0.2);
-          border-left: 2px solid #ffaa00;
+          background-color: rgba(255, 255, 0, 0.2) !important;
         }
         .current-line-glyph {
-          background-color: rgba(255, 215, 0, 0.2);
-        }
-        .breakpoint-glyph {
-          background-color: #e51400;
-          border-radius: 50%;
-          margin-left: 5px;
-          width: 8px !important;
-          height: 8px !important;
+          background-color: #ffff00 !important;
+          width: 4px !important;
         }
       `}</style>
-      <div ref={containerRef} className="w-full h-full" />
     </div>
   )
 }
