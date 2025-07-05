@@ -40,10 +40,11 @@ const loadSampleCode = (sample: string) => {
       case "javascript":
         return [
           { key: "fibonacci", label: "Fibonacci" },
+          { key: "factorial", label: "Factorial" },
           { key: "bubbleSort", label: "Bubble Sort" },
           { key: "insertionSort", label: "Insertion Sort" },
-          { key: "factorial", label: "Factorial" },
           { key: "binarySearch", label: "Binary Search" },
+          { key: "linearSearch", label: "Linear Search" },
         ]
       case "python":
         return [
@@ -73,6 +74,7 @@ const loadSampleCode = (sample: string) => {
         return []
     }
   }
+const visualizableAlgos = ["bubbleSort", "insertionSort", "linearSearch", "binarySearch"]
 
   return (
     <Card>
@@ -91,11 +93,12 @@ const loadSampleCode = (sample: string) => {
               </Button>
             ))}
           </div>
-          {["bubbleSort", "insertionSort"].includes(selectedKey) && language === "javascript" && (
+          {visualizableAlgos.includes(selectedKey) && language === "javascript" && (
   <Button onClick={() => onVisualizeClick(selectedKey)}>
     Visualize
   </Button>
 )}
+
 
           {isDebugging && (
             <>

@@ -52,6 +52,33 @@ const numbers = [64, 34, 25, 12, 22, 11, 90];
 console.log("Original array:", numbers);
 console.log("Sorted array:", insertionSort([...numbers]));`,
 
+binarySearch: `function binarySearch(arr, target) {
+  let left = 0;
+  let right = arr.length - 1;
+
+  while (left <= right) {
+    let mid = Math.floor((left + right) / 2);
+    if (arr[mid] === target) return mid;
+    else if (arr[mid] < target) left = mid + 1;
+    else right = mid - 1;
+  }
+
+  return -1;
+}
+
+const arr = [1, 3, 5, 7, 9];
+console.log("Index of 5:", binarySearch(arr, 5));`,
+
+linearSearch: `function linearSearch(arr, target) {
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === target) return i;
+  }
+  return -1;
+}
+
+const arr = [5, 3, 8, 4, 2];
+console.log("Index of 4:", linearSearch(arr, 4));`,
+
   factorial: `function factorial(n) {
   if (n === 0 || n === 1) {
     return 1;
@@ -69,30 +96,6 @@ function iterativeFactorial(n) {
 
 console.log("Recursive factorial of 5:", factorial(5));
 console.log("Iterative factorial of 5:", iterativeFactorial(5));`,
-
-  binarySearch: `function binarySearch(arr, target) {
-  let left = 0;
-  let right = arr.length - 1;
-  
-  while (left <= right) {
-    let mid = Math.floor((left + right) / 2);
-    
-    if (arr[mid] === target) {
-      return mid;
-    } else if (arr[mid] < target) {
-      left = mid + 1;
-    } else {
-      right = mid - 1;
-    }
-  }
-  
-  return -1;
-}
-
-const sortedArray = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
-console.log("Array:", sortedArray);
-console.log("Search for 7:", binarySearch(sortedArray, 7));
-console.log("Search for 4:", binarySearch(sortedArray, 4));`,
 
   pythonFibonacci: `def fibonacci(n):
     if n <= 1:
