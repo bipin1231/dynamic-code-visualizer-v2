@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle, Clock, BookOpen } from "lucide-react"
+import { AlertCircle, CheckCircle, Clock } from "lucide-react"
 import type { Variable, ExecutionStep } from "@/types/execution"
+import { Button } from "@/components/ui/button"
 
 interface VisualizationPanelProps {
   variables: Variable[]
@@ -25,167 +27,33 @@ export default function VisualizationPanel({
   executionSteps,
   code,
 }: VisualizationPanelProps) {
-  const analyzeCode = (code: string) => {
-    const lines = code.split("\n").filter((line) => line.trim() && !line.trim().startsWith("//"))
-    const analysis = {
-      functions: [] as string[],
-      variables: [] as string[],
-      loops: [] as string[],
-      conditions: [] as string[],
-      outputs: [] as string[],
-      complexity: "O(1)",
-      spaceComplexity: "O(1)",
-      algorithm: "Unknown",
+  const [mode, setMode] = useState<"timeComplexity" | "explanation" | "chat" | "quiz">("timeComplexity")
+  const [botOutput, setBotOutput] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [question, setQuestion] = useState("")
+  const [showHint, setShowHint] = useState(false)
+
+  async function invokeBot() {
+    setLoading(true)
+    const payload: any = {
+      mode,
+      codeContext: code,
     }
-
-    lines.forEach((line) => {
-      const funcMatch =
-        line.match(/function\s+(\w+)/) || line.match(/const\s+(\w+)\s*=.*=>/) || line.match(/(\w+)\s*$$[^)]*$$\s*{/)
-      if (funcMatch) {
-        analysis.functions.push(funcMatch[1])
-      }
-
-      const varMatch = line.match(/(let|const|var)\s+(\w+)/)
-      if (varMatch) {
-        analysis.variables.push(varMatch[2])
-      }
-
-      if (line.includes("for") && line.includes("(")) {
-        const forMatch = line.match(/for\s*$$[^)]+$$/)
-        if (forMatch) analysis.loops.push("for loop")
-      }
-      if (line.includes("while") && line.includes("(")) {
-        analysis.loops.push("while loop")
-      }
-
-      if (line.includes("if") && line.includes("(")) {
-        analysis.conditions.push("conditional statement")
-      }
-
-      if (line.includes("console.log")) {
-        analysis.outputs.push("console output")
-      }
-    })
-
-    const codeText = code.toLowerCase()
-
-    if (codeText.includes("fibonacci")) {
-      analysis.algorithm = "Fibonacci Sequence"
-      analysis.complexity = analysis.loops.length > 0 ? "O(n)" : "O(2^n)"
-      analysis.spaceComplexity = analysis.loops.length > 0 ? "O(1)" : "O(n)"
-    } else if (codeText.includes("factorial")) {
-      analysis.algorithm = "Factorial Calculation"
-      analysis.complexity = codeText.includes("for") || codeText.includes("while") ? "O(n)" : "O(n)"
-      analysis.spaceComplexity = codeText.includes("for") || codeText.includes("while") ? "O(1)" : "O(n)"
-    } else if (codeText.includes("sort") || codeText.includes("bubble")) {
-      analysis.algorithm = "Bubble Sort"
-      analysis.complexity = "O(n²)"
-      analysis.spaceComplexity = "O(1)"
-    } else if (codeText.includes("binary") && codeText.includes("search")) {
-      analysis.algorithm = "Binary Search"
-      analysis.complexity = "O(log n)"
-      analysis.spaceComplexity = "O(1)"
-    } else if (analysis.loops.length >= 2) {
-      analysis.algorithm = "Nested Loop Algorithm"
-      analysis.complexity = "O(n²)"
-    } else if (analysis.loops.length === 1) {
-      analysis.algorithm = "Linear Algorithm"
-      analysis.complexity = "O(n)"
-    } else if (codeText.includes("recursive") || (codeText.includes("return") && analysis.functions.length > 0)) {
-      analysis.algorithm = "Recursive Algorithm"
-      analysis.complexity = "O(2^n) or O(n)"
-      analysis.spaceComplexity = "O(n)"
+    if (mode === "chat") payload.question = question
+    try {
+      const res = await fetch("/api/chatbot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      setBotOutput(json.reply || json.error)
+    } catch (e) {
+      console.error(e)
+      setBotOutput("Error communicating with bot.")
+    } finally {
+      setLoading(false)
     }
-
-    return analysis
-  }
-
-  const generateCodeExplanation = () => {
-    const analysis = analyzeCode(code)
-
-    if (!code.trim()) {
-      return "No code to analyze. Write some code in the editor to see the explanation."
-    }
-
-    return `
-**${analysis.algorithm}**
-
-**Structure:**
-• Functions: ${analysis.functions.length > 0 ? analysis.functions.join(", ") : "None"}
-• Variables: ${analysis.variables.length > 0 ? analysis.variables.slice(0, 3).join(", ") + (analysis.variables.length > 3 ? "..." : "") : "None"}
-• Loops: ${analysis.loops.length > 0 ? analysis.loops.length + " loop(s)" : "None"}
-• Conditions: ${analysis.conditions.length > 0 ? analysis.conditions.length + " condition(s)" : "None"}
-
-**Approach:**
-${
-  analysis.algorithm === "Fibonacci Sequence"
-    ? "Calculates Fibonacci numbers where each number is the sum of the two preceding ones."
-    : analysis.algorithm === "Factorial Calculation"
-      ? "Computes factorial (n!) which is the product of all positive integers less than or equal to n."
-      : analysis.algorithm === "Bubble Sort"
-        ? "Repeatedly steps through the list, compares adjacent elements and swaps them if they're in the wrong order."
-        : analysis.algorithm === "Binary Search"
-          ? "Finds position of a target value by dividing a sorted array in half repeatedly."
-          : analysis.loops.length >= 2
-            ? "Uses nested loops to process data with multiple iterations."
-            : analysis.loops.length === 1
-              ? "Processes data in a single pass through the input."
-              : "Uses direct computation without iteration."
-}
-
-**Implementation:**
-• Style: ${analysis.loops.length > 0 ? "Iterative" : analysis.functions.length > 0 && code.includes("return") ? "Recursive" : "Sequential"}
-• Complexity: ${analysis.complexity} time, ${analysis.spaceComplexity} space
-    `.trim()
-  }
-
-  const generateTimeComplexity = () => {
-    const analysis = analyzeCode(code)
-
-    if (!code.trim()) {
-      return "No code to analyze. Write some code in the editor to see the complexity analysis."
-    }
-
-    return `
-**Time Complexity: ${analysis.complexity}**
-
-**Breakdown:**
-• Algorithm: ${analysis.algorithm}
-• Operations: ${
-      analysis.loops.length >= 2
-        ? "Nested loops create quadratic complexity"
-        : analysis.loops.length === 1
-          ? "Single loop creates linear complexity"
-          : analysis.algorithm === "Binary Search"
-            ? "Halving the search space creates logarithmic complexity"
-            : "Simple operations with constant complexity"
-    }
-• Space: ${analysis.spaceComplexity} (${
-      analysis.spaceComplexity === "O(1)"
-        ? "constant extra space"
-        : analysis.spaceComplexity === "O(n)"
-          ? "space grows with input size"
-          : "variable space usage"
-    })
-
-**Performance:**
-• Best case: ${analysis.algorithm === "Bubble Sort" ? "O(n) if already sorted" : analysis.complexity}
-• Average: ${analysis.complexity}
-• Worst: ${analysis.complexity}
-
-**Scalability:**
-${
-  analysis.complexity === "O(1)"
-    ? "✅ Excellent - handles any input size efficiently"
-    : analysis.complexity === "O(log n)"
-      ? "✅ Very good - scales well with large inputs"
-      : analysis.complexity === "O(n)"
-        ? "✅ Good - reasonable for most inputs"
-        : analysis.complexity === "O(n²)"
-          ? "⚠️ Fair - may be slow for large inputs"
-          : "⚠️ Poor - inefficient for large inputs"
-}
-    `.trim()
   }
 
   return (
@@ -194,11 +62,13 @@ ${
         <CardTitle>Result</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="output" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="output" onValueChange={(val) => setMode(val as any)} className="w-full">
+          <TabsList className="flex flex-wrap gap-2 justify-start">
             <TabsTrigger value="output">Output</TabsTrigger>
-            <TabsTrigger value="explanation">Code Explanation</TabsTrigger>
-            <TabsTrigger value="complexity">Time Complexity</TabsTrigger>
+            <TabsTrigger value="timeComplexity">Time Complexity</TabsTrigger>
+            <TabsTrigger value="explanation">Explanation</TabsTrigger>
+            <TabsTrigger value="chat">Chat</TabsTrigger>
+            <TabsTrigger value="quiz">Quiz</TabsTrigger>
           </TabsList>
 
           <TabsContent value="output" className="space-y-2">
@@ -232,33 +102,78 @@ ${
             </div>
           </TabsContent>
 
-          <TabsContent value="explanation" className="space-y-2">
-            <div className="h-80 overflow-auto">
-              <div className="p-4 bg-muted/50 rounded-lg border">
-                <div className="flex items-center gap-2 mb-3">
-                  <BookOpen className="w-4 h-4 text-blue-500" />
-                  <Badge variant="outline">Code Analysis</Badge>
-                </div>
-                <div className="prose prose-sm max-w-none text-sm">
-                  <div className="whitespace-pre-line text-foreground leading-relaxed">{generateCodeExplanation()}</div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
+          {(["timeComplexity", "explanation", "chat", "quiz"] as const).map((tabKey) => (
+            <TabsContent key={tabKey} value={tabKey}>
+              {tabKey === "chat" && (
+                <input
+                  className="border p-2 w-full mb-2"
+                  placeholder="Ask a question about the code…"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                />
+              )}
 
-          <TabsContent value="complexity" className="space-y-2">
-            <div className="h-80 overflow-auto">
-              <div className="p-4 bg-muted/50 rounded-lg border">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-4 h-4 text-purple-500" />
-                  <Badge variant="outline">Performance Analysis</Badge>
-                </div>
-                <div className="prose prose-sm max-w-none text-sm">
-                  <div className="whitespace-pre-line text-foreground leading-relaxed">{generateTimeComplexity()}</div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
+              <Button
+                onClick={invokeBot}
+                disabled={loading || (tabKey === "chat" && !question.trim())}
+              >
+                {loading ? "Processing..." :
+                  tabKey === "timeComplexity" ? "Analyze" :
+                  tabKey === "explanation" ? "Explain" :
+                  tabKey === "chat" ? "Ask" :
+                  "Play Quiz"}
+              </Button>
+
+              {tabKey !== "quiz" && botOutput && (
+                <pre className="mt-4 bg-muted p-4 rounded whitespace-pre-wrap">{botOutput}</pre>
+              )}
+
+              {tabKey === "quiz" && botOutput && (() => {
+                try {
+                  const cleaned = botOutput
+                    .replace(/^```json\s*/, '')
+                    .replace(/```$/, '')
+                    .trim()
+                  const parsed = JSON.parse(cleaned)
+
+                  return (
+                    <div className="space-y-4 mt-4">
+                      <div className="font-semibold">{parsed.question}</div>
+                      <ul className="space-y-2">
+                        {parsed.options.map((option: string, idx: number) => (
+                          <li key={idx}>
+                            <button
+                              onClick={() => alert(idx === parsed.correctIndex ? "✅ Correct!" : "❌ Try again.")}
+                              className="w-full text-left border p-2 rounded hover:bg-gray-100"
+                            >
+                              {String.fromCharCode(65 + idx)}) {option}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      {parsed.hint && (
+                        <div className="pt-2">
+                          <button
+                            className="text-blue-600 underline"
+                            onClick={() => setShowHint((prev) => !prev)}
+                          >
+                            {showHint ? "Hide Hint" : "Show Hint"}
+                          </button>
+                          {showHint && (
+                            <div className="mt-2 bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded text-sm">
+                              💡 <strong>Hint:</strong> {parsed.hint}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                } catch {
+                  return <pre className="mt-4 bg-muted p-4 rounded whitespace-pre-wrap">{botOutput}</pre>
+                }
+              })()}
+            </TabsContent>
+          ))}
         </Tabs>
       </CardContent>
     </Card>

@@ -166,11 +166,11 @@ const handleVisualizeClick = (algorithm: string) => {
           )}
         </div>
 
-        <div>
+        {/* <div>
           <NewExplationModule
           initialCode={code}
           />
-        </div>
+        </div> */}
 
         {/* Visualization Panel when debugging */}
         {isDebugging && executionSteps.length > 0 && (
