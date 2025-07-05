@@ -29,25 +29,25 @@ export default function LandingPage() {
       title: "Multi-Language Support",
       description:
         "Write and execute code in JavaScript, Python, C, C++, and Java with syntax highlighting and error detection.",
-      image: "/placeholder.svg?height=300&width=400",
+      image: "../images/multi-programming-language.png",
     },
     {
       icon: <Bug className="w-8 h-8" />,
       title: "Step-by-Step Debugging",
       description: "Debug your code line by line, set breakpoints, and watch variables change in real-time.",
-      image: "/placeholder.svg?height=300&width=400",
+      image: "../images/step-by-step-debugging.png",
     },
     {
       icon: <Eye className="w-8 h-8" />,
       title: "Visual Execution Timeline",
       description: "See your code execution flow with an interactive timeline showing each step of the process.",
-      image: "/placeholder.svg?height=300&width=400",
+      image: "../images/visual-execution-timeline.png",
     },
     {
       icon: <Zap className="w-8 h-8" />,
       title: "Real-time Code Analysis",
       description: "Get instant feedback on time complexity, algorithm analysis, and performance insights.",
-      image: "/placeholder.svg?height=300&width=400",
+      image: "../images/real-time-code-analysis.png",
     },
   ]
 
@@ -131,14 +131,23 @@ export default function LandingPage() {
               </Badge>
 
             {/* Hero Image */}
-            {/* <div className="mt-16 relative">
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent z-10"></div>
-              <img
-                src="/placeholder.svg?height=600&width=1000"
-                alt="Code Visualizer Interface"
-                className="mx-auto rounded-lg shadow-2xl border"
-              />
-            </div> */}
+            {/* <div
+              className="mt-16 w-1/2 mx-auto rounded-lg shadow-2xl border bg-cover bg-center"
+              style={{
+                backgroundImage: `linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(20, 20, 20, 0.7)), url('../images/first-img.jpg')`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                height: "300px",
+              }}
+            ></div> */}
+            <div
+              className="w-full min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
+              style={{
+                backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(15,15,15,0.9)), url('../images/first-img.jpg')`,
+              }}
+            >
+            </div>
+
           </div>
         </div>
       </section>
