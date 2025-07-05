@@ -230,6 +230,52 @@ module.exports = function ({ types: t }) {
           }));
         }
       },
+      IfStatement(path) {
+  const line = path.node.loc?.start?.line || 0;
+  const test = path.node.test;
+
+  const conditionCode = generate(test).code;
+
+  // Create a unique identifier to store result
+  const resultId = path.scope.generateUidIdentifier("_conditionResult");
+
+  // Create: const _conditionResult = actual_condition;
+  const conditionEval = t.variableDeclaration("const", [
+    t.variableDeclarator(resultId, test),
+  ]);
+
+  // Create: emitStep({ ... })
+  const emitConditionStep = createEmitStep("condition", line, {
+    expressionCode: conditionCode,
+    conditionValue: true, // <- 👈 This is just placeholder
+    description: `Evaluating condition '${conditionCode}'`,
+  });
+
+  // Replace the above emit step's `conditionValue` with the actual identifier
+  emitConditionStep.expression.arguments[0].properties = emitConditionStep.expression.arguments[0].properties.map(
+    (prop) => {
+      if (
+        t.isObjectProperty(prop) &&
+        t.isIdentifier(prop.key) &&
+        prop.key.name === "conditionValue"
+      ) {
+        return t.objectProperty(
+          t.identifier("conditionValue"),
+          resultId // ✅ This injects actual evaluated result
+        );
+      }
+      return prop;
+    }
+  );
+
+  // Inject both before the `if` statement
+  path.insertBefore(conditionEval);
+  path.insertBefore(emitConditionStep);
+
+  // Replace the actual condition with _conditionResult
+  path.node.test = resultId;
+}
+
     },
   };
 };

@@ -89,6 +89,8 @@ const generateDetailedDescription = (step: ExecutionStep) => {
   }
 
   if (step.type === "condition") {
+    
+    
     const conditionResult = step.conditionValue ? "true" : "false";
     return `Evaluating condition: ${step.expressionCode}. 
             This expression evaluates to ${conditionResult}, 
