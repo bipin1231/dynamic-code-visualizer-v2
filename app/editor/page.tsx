@@ -14,8 +14,7 @@ import { generateFlowchart } from "@/components/flowchart"
 import { FlowchartView } from "@/components/FlowchartView"
 import AlternativeVisualizer from "@/components/AlternativeVisualizer"
 import { useEnhancedExecution } from "@/hooks/useEnhancedExecution"
-
-
+import SortingVisualizer from "@/components/SortingVisualizer"
 import Link from "next/link"
 
 export default function CodeVisualizer() {
@@ -62,9 +61,11 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
     setExecutionSpeed,
   } = useCodeExecution(code)
 
+const [visualizingAlgo, setVisualizingAlgo] = useState<string | null>(null)
 
-  
-
+const handleVisualizeClick = (algorithm: string) => {
+  setVisualizingAlgo(algorithm)
+}
 
 
   const toggleBreakpoint = (lineNumber: number) => {
@@ -115,6 +116,7 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
           executionSpeed={executionSpeed}
           onSpeedChange={setExecutionSpeed}
           language={language}
+          onVisualizeClick={handleVisualizeClick}
         />
 
         {/* Main Content Grid */}
@@ -201,6 +203,16 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
   </Card>
 )}
 
+{visualizingAlgo && (
+  <Card className="lg:col-span-1">
+    <CardHeader>
+      <CardTitle>{`Visualizing ${visualizingAlgo === "bubbleSort" ? "Bubble Sort" : "Insertion Sort"}`}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <SortingVisualizer algorithm={visualizingAlgo} onClose={() => setVisualizingAlgo(null)} />
+    </CardContent>
+  </Card>
+)}
 
 
         {/* Debug Information */}

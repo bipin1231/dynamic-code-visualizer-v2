@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Settings } from "lucide-react"
 import { sampleCodes } from "@/data/sample-codes"
+import { useState } from "react"
 
 interface SampleCodeSelectorProps {
   onCodeSelect: (code: string) => void
@@ -13,6 +14,7 @@ interface SampleCodeSelectorProps {
   executionSpeed: number
   onSpeedChange: (speed: number) => void
   language: string
+  onVisualizeClick: (algorithm: string) => void
 }
 
 export default function SampleCodeSelector({
@@ -21,13 +23,17 @@ export default function SampleCodeSelector({
   executionSpeed,
   onSpeedChange,
   language,
+  onVisualizeClick,
 }: SampleCodeSelectorProps) {
-  const loadSampleCode = (sample: string) => {
-    const code = sampleCodes[sample as keyof typeof sampleCodes]
-    if (code) {
-      onCodeSelect(code)
-    }
+  const [selectedKey, setSelectedKey] = useState("")
+
+const loadSampleCode = (sample: string) => {
+  setSelectedKey(sample)
+  const code = sampleCodes[sample as keyof typeof sampleCodes]
+  if (code) {
+    onCodeSelect(code)
   }
+}
 
   const getLanguageSamples = () => {
     switch (language) {
@@ -35,6 +41,7 @@ export default function SampleCodeSelector({
         return [
           { key: "fibonacci", label: "Fibonacci" },
           { key: "bubbleSort", label: "Bubble Sort" },
+          { key: "insertionSort", label: "Insertion Sort" },
           { key: "factorial", label: "Factorial" },
           { key: "binarySearch", label: "Binary Search" },
         ]
@@ -84,6 +91,12 @@ export default function SampleCodeSelector({
               </Button>
             ))}
           </div>
+          {["bubbleSort", "insertionSort"].includes(selectedKey) && language === "javascript" && (
+  <Button onClick={() => onVisualizeClick(selectedKey)}>
+    Visualize
+  </Button>
+)}
+
           {isDebugging && (
             <>
               <Separator orientation="vertical" className="h-6" />

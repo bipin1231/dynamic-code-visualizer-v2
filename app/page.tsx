@@ -119,10 +119,16 @@ export default function LandingPage() {
                   To the Code Editor
                 </Button>
               </Link>
+              <Link href="/new-visualizer">
+                <Button size="lg" className="text-lg px-8 py-6 group">
+                  <ArrowRight className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" />
+                  To the New Visualizer
+                </Button>
+              </Link>
+            </div>
               <Badge variant="secondary" className="text-sm px-4 py-2">
                 No installation required • Works in your browser
               </Badge>
-            </div>
 
             {/* Hero Image */}
             {/* <div className="mt-16 relative">
