@@ -16,6 +16,7 @@ import AlternativeVisualizer from "@/components/AlternativeVisualizer"
 import { useEnhancedExecution } from "@/hooks/useEnhancedExecution"
 import SortingVisualizer from "@/components/SortingVisualizer"
 import Link from "next/link"
+import SearchingVisualizer from "@/components/SearchingVisualizer"
 
 export default function CodeVisualizer() {
   const [code, setCode] = useState(`function fibonacci(n) {
@@ -62,9 +63,17 @@ console.log("Fibonacci of 5:", fibonacci(5));`)
   } = useCodeExecution(code)
 
 const [visualizingAlgo, setVisualizingAlgo] = useState<string | null>(null)
+const [searchingAlgo, setSearchingAlgo] = useState<"linearSearch" | "binarySearch" | null>(null)
+
 
 const handleVisualizeClick = (algorithm: string) => {
-  setVisualizingAlgo(algorithm)
+  if (algorithm === "bubbleSort" || algorithm === "insertionSort") {
+    setVisualizingAlgo(algorithm)
+    setSearchingAlgo(null)
+  } else if (algorithm === "linearSearch" || algorithm === "binarySearch") {
+    setSearchingAlgo(algorithm)
+    setVisualizingAlgo(null)
+  }
 }
 
 
@@ -214,6 +223,16 @@ const handleVisualizeClick = (algorithm: string) => {
   </Card>
 )}
 
+{searchingAlgo && (
+  <Card className="lg:col-span-1 mt-4">
+    <CardHeader>
+      <CardTitle>{`Visualizing ${searchingAlgo === "linearSearch" ? "Linear Search" : "Binary Search"}`}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <SearchingVisualizer algorithm={searchingAlgo} onClose={() => setSearchingAlgo(null)} />
+    </CardContent>
+  </Card>
+)}
 
         {/* Debug Information */}
         {/* {isDebugging && (
