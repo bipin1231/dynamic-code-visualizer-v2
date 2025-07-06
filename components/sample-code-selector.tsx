@@ -80,7 +80,7 @@ const visualizableAlgos = ["bubbleSort", "insertionSort", "linearSearch", "binar
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Settings className="w-5 h-5" />
+          {/* <Settings className="w-5 h-5" /> */}
           Sample Code
         </CardTitle>
       </CardHeader>

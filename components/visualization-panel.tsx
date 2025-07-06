@@ -58,11 +58,11 @@ export default function VisualizationPanel({
 
   return (
     <Card className="lg:col-span-1">
-      <CardHeader>
+      {/* <CardHeader>
         <CardTitle>Result</CardTitle>
-      </CardHeader>
+      </CardHeader> */}
       <CardContent>
-        <Tabs defaultValue="output" onValueChange={(val) => setMode(val as any)} className="w-full">
+        <Tabs defaultValue="output" onValueChange={(val) => setMode(val as any)} className="w-full mt-2">
           <TabsList className="flex flex-wrap gap-2 justify-start">
             <TabsTrigger value="output">Output</TabsTrigger>
             <TabsTrigger value="timeComplexity">Time Complexity</TabsTrigger>

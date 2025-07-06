@@ -193,24 +193,8 @@ const handleVisualizeClick = (algorithm: string) => {
             code={code}
           />
         )}
+       
 
-{executionSteps.length > 0 && (
- <Card className="lg:col-span-1">
-      <AlternativeVisualizer steps={executionSteps} codeSnippet={code} />
-    </Card>
-)}
-        
-
-{isDebugging && flowchartData && (
-  <Card>
-    <CardHeader>
-      <CardTitle>Flowchart</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <FlowchartView nodes={flowchartData.nodes} edges={flowchartData.edges} />
-    </CardContent>
-  </Card>
-)}
 
 {visualizingAlgo && (
   <Card className="lg:col-span-1">
@@ -234,6 +218,16 @@ const handleVisualizeClick = (algorithm: string) => {
   </Card>
 )}
 
+{isDebugging && flowchartData && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Flowchart</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <FlowchartView nodes={flowchartData.nodes} edges={flowchartData.edges} />
+    </CardContent>
+  </Card>
+)}
         {/* Debug Information */}
         {/* {isDebugging && (
           <Card>
