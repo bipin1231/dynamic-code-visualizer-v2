@@ -1,30 +1,39 @@
-# Code Execution Visualizer
+Dynamic Code Visualizer 🚀
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+An interactive educational tool that bridges the gap between code and comprehension. The Dynamic Code Visualizer allows students, educators, and developers to write code and visualize its execution step by step. It provides real-time insights into how algorithms, data structures, and logic flow, making programming easier to understand.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/thunder-hunts-projects/v0-code-execution-visualizer)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/8DiV3QB3apt)
+✨ Features
 
-## Overview
+📝 Code Editor – Write code directly in the browser.
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+🔍 Step-by-Step Execution – Watch your code run line by line.
 
-## Deployment
+📊 Interactive Visualizations – See how algorithms and data structures evolve in real-time.
 
-Your project is live at:
+📖 Explanations – Get AI-generated explanations for code snippets.
 
-**[https://vercel.com/thunder-hunts-projects/v0-code-execution-visualizer](https://vercel.com/thunder-hunts-projects/v0-code-execution-visualizer)**
+⏱ Complexity Analysis – Analyze time & space complexity instantly.
 
-## Build your app
+🌐 Multi-language Support – Supports multiple programming languages (planned).
 
-Continue building your app on:
+🎯 Use Cases
 
-**[https://v0.dev/chat/projects/8DiV3QB3apt](https://v0.dev/chat/projects/8DiV3QB3apt)**
+👨‍🎓 Students – Understand algorithms visually.
 
-## How It Works
+👩‍🏫 Educators – Use as a teaching aid in classrooms.
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+👨‍💻 Programmers – Debug and analyze logic flow interactively.
+
+🛠 Tech Stack
+
+Frontend: React, Tailwind CSS, Framer Motion
+
+Backend: Node.js / Express (or your choice)
+
+AI Integration: Gemini API (for explanations & complexity analysis)
+
+Visualization: Custom interactive rendering for algorithms and data structures
+
+npm or yarn
+
+Installation
