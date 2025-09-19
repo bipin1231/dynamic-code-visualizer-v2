@@ -26,9 +26,7 @@ An interactive educational tool that bridges the gap between code and comprehens
 
 🛠 Tech Stack
 
-Frontend: React, Tailwind CSS, Framer Motion
-
-Backend: Node.js / Express (or your choice)
+Tech: React,Next,TypeScript Tailwind CSS, Framer Motion
 
 AI Integration: Gemini API (for explanations & complexity analysis)
 
