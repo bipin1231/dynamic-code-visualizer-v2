@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import * as monaco from "monaco-editor"
+import { monaco } from "../hooks/monaco-setup"; 
 
 interface MonacoEditorProps {
   value: string

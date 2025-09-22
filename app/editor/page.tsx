@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Clock } from "lucide-react"
-import MonacoEditor from "../../components/monaco-editor"
+
 import ExecutionTimeline from "../../components/execution-timeline"
 import DebugControls from "../../components/debug-controls"
 import VisualizationPanel from "../../components/visualization-panel"
@@ -11,11 +11,16 @@ import SampleCodeSelector from "../../components/sample-code-selector"
 
 import { useCodeExecution } from "../../hooks/use-code-execution"
 import { generateFlowchart } from "../../components/flowchart"
-import { FlowchartView } from "../../components/FlowchartView"
 
-import SortingVisualizer from "../../components/SortingVisualizer"
 import Link from "next/link"
-import SearchingVisualizer from "../../components/SearchingVisualizer"
+
+import dynamic from "next/dynamic";
+
+const MonacoEditor = dynamic(() => import("../../components/monaco-editor"), { ssr: false });
+const SortingVisualizer = dynamic(() => import("../../components/SortingVisualizer"), { ssr: false });
+const SearchingVisualizer = dynamic(() => import("../../components/SearchingVisualizer"), { ssr: false });
+
+
 
 export default function CodeVisualizer() {
   const [code, setCode] = useState(`function fibonacci(n) {
@@ -215,16 +220,6 @@ const handleVisualizeClick = (algorithm: string) => {
   </Card>
 )}
 
-{isDebugging && flowchartData && (
-  <Card>
-    <CardHeader>
-      <CardTitle>Flowchart</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <FlowchartView nodes={flowchartData.nodes} edges={flowchartData.edges} />
-    </CardContent>
-  </Card>
-)}
         {/* Debug Information */}
         {/* {isDebugging && (
           <Card>
