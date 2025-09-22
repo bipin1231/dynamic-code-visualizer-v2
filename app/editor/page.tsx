@@ -1,22 +1,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Clock } from "lucide-react"
-import MonacoEditor from "@/components/monaco-editor"
-import ExecutionTimeline from "@/components/execution-timeline"
-import DebugControls from "@/components/debug-controls"
-import VisualizationPanel from "@/components/visualization-panel"
-import SampleCodeSelector from "@/components/sample-code-selector"
-import NewExplationModule from "@/components/NewExplationModule"
-import { useCodeExecution } from "@/hooks/use-code-execution"
-import { generateFlowchart } from "@/components/flowchart"
-import { FlowchartView } from "@/components/FlowchartView"
-import AlternativeVisualizer from "@/components/AlternativeVisualizer"
-import { useEnhancedExecution } from "@/hooks/useEnhancedExecution"
-import SortingVisualizer from "@/components/SortingVisualizer"
+import MonacoEditor from "../../components/monaco-editor"
+import ExecutionTimeline from "../../components/execution-timeline"
+import DebugControls from "../../components/debug-controls"
+import VisualizationPanel from "../../components/visualization-panel"
+import SampleCodeSelector from "../../components/sample-code-selector"
+
+import { useCodeExecution } from "../../hooks/use-code-execution"
+import { generateFlowchart } from "../../components/flowchart"
+import { FlowchartView } from "../../components/FlowchartView"
+
+import SortingVisualizer from "../../components/SortingVisualizer"
 import Link from "next/link"
-import SearchingVisualizer from "@/components/SearchingVisualizer"
+import SearchingVisualizer from "../../components/SearchingVisualizer"
 
 export default function CodeVisualizer() {
   const [code, setCode] = useState(`function fibonacci(n) {
@@ -142,9 +141,7 @@ const handleVisualizeClick = (algorithm: string) => {
                 onChange={setCode}
                 language={language}
                 currentLine={currentLine}
-                breakpoints={breakpoints}
-                onBreakpointToggle={toggleBreakpoint}
-                disabled={isRunning || isDebugging}
+ 
               />
             </CardContent>
           </Card>
